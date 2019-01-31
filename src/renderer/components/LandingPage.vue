@@ -33,16 +33,17 @@
 
 <script>
 import SystemInformation from "./LandingPage/SystemInformation";
+import Vue from "vue";
 
-export default {
-  name: "landing-page",
+export default Vue.extend({
+  name: "LandingPage",
   components: { SystemInformation },
   methods: {
     open(link) {
       this.$electron.shell.openExternal(link);
     }
   }
-};
+});
 </script>
 
 <style>

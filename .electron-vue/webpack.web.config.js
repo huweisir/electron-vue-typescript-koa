@@ -79,10 +79,10 @@ let webConfig = {
         }
       },
       {
-        test: /\.tsx?$/,
+        test: /\.ts?$/,
         use: {
           loader: "ts-loader",
-          exclude: /node_modules/,
+          // exclude: /node_modules/,
           options: {
             appendTsSuffixTo: [/\.vue$/],
           }
