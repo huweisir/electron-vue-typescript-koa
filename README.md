@@ -1,6 +1,6 @@
-# electron-vue
+# electron-vue-typescript-koa
 
-> An electron-vue project
+> An electron-vue project width typescript and koa2
 
 #### Build Setup
 
