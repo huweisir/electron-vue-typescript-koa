@@ -25,6 +25,7 @@
           <div class="title alt">Other Documentation</div>
           <button class="alt" @click="open('https://electron.atom.io/docs/')">Electron</button>
           <button class="alt" @click="open('https://vuejs.org/v2/guide/')">Vue.js</button>
+          <button class="foo-button mdc-button">Button</button>
         </div>
       </div>
     </main>
@@ -45,8 +46,8 @@ export default Vue.extend({
   }
 });
 </script>
-
-<style>
+ <style lang="scss">
+@import "~@material/button/mdc-button.scss";
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro");
 
 * {
@@ -125,6 +126,8 @@ main > div {
   transition: all 0.15s ease;
   box-sizing: border-box;
   border: 1px solid #4fc08d;
+  /* @include mdc-button-ink-color(teal); */
+  /* @include mdc-states(teal); */
 }
 
 .doc button.alt {

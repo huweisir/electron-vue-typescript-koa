@@ -18,7 +18,7 @@ function createWindow() {
    * Initial window options
    */
   mainWindow = new BrowserWindow({
-    height: 563,
+    height: 500,
     useContentSize: true,
     width: 1000
   })
@@ -30,7 +30,7 @@ function createWindow() {
   })
 }
 
-app.on('ready', createWindow)
+app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
