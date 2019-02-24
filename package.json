@@ -55,6 +55,7 @@
   "dependencies": {
     "animate.css": "^3.7.0",
     "axios": "^0.18.0",
+    "http-proxy": "^1.17.0",
     "material-components-web": "^0.43.1",
     "vue": "^2.5.16",
     "vue-electron": "^1.0.6",

@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>electron-vue</title>
-    <% if (htmlWebpackPlugin.options.nodeModules) { %>
-      <!-- Add `node_modules/` to global paths so `require` works properly in development -->
-      <script>
-        require('module').globalPaths.push('<%= htmlWebpackPlugin.options.nodeModules.replace(/\\/g, '\\\\') %>')
-      </script>
-    <% } %>
-  </head>
-  <body>
-    <div id="app"></div>
-    <!-- Set `__static` path to static files in production -->
-    <% if (!process.browser) { %>
-      <script>
-        if (process.env.NODE_ENV !== 'development') window.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
-      </script>
-    <% } %>
 
-    <!-- webpack builds are automatically injected -->
-  </body>
+<head>
+  <meta charset="utf-8">
+  <title>electron-vue</title>
+  <% if (htmlWebpackPlugin.options.nodeModules) { %>
+  <!-- Add `node_modules/` to global paths so `require` works properly in development -->
+  <script>
+    require('module').globalPaths.push("<%= htmlWebpackPlugin.options.nodeModules.replace(/\\/g, '\\\\') %>")
+    // const enav = new (require('electron-navigation'))();
+  </script>
+  <% } %>
+</head>
+
+<body>
+  <div id="app"></div>
+  <!-- Set `__static` path to static files in production -->
+  <% if (!process.browser) { %>
+  <script>
+    if (process.env.NODE_ENV !== 'development') window.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
+  </script>
+  <% } %>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js">
+  </script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+  <!-- webpack builds are automatically injected -->
+</body>
+
 </html>

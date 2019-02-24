@@ -2,16 +2,11 @@
   <div id="wrapper">
     <img id="logo" src="~@/assets/logo.png" alt="electron-vue">
     <main>
-      <div class="left-side">
-        <span class="title">Welcome to your new project!</span>
-        <system-information></system-information>
-      </div>
+      <iframe :src="href" @load="ifmLoad();" frameborder="0" width="750" height="800"></iframe>
       <div class="right-side">
         <div class="doc">
           <div class="title">Getting Started</div>
-          <button
-            @click="open('https://simulatedgreg.gitbooks.io/electron-vue/content/')"
-          >Read the Docs</button>
+          <button @click="get_equip_detail();">Read the Docs</button>
           <br>
           <br>
         </div>
@@ -21,16 +16,58 @@
 </template>
 
 <script>
-import SystemInformation from "./LandingPage/SystemInformation";
+import SystemInformation from "../LandingPage/SystemInformation";
 import Vue from "vue";
+import { setTimeout, setImmediate, clearTimeout } from "timers";
+// import "https://code.jquery.com/jquery-3.3.1.min.js";
 
 export default Vue.extend({
   name: "LandingPage",
+  data() {
+    return {
+      ifm: null,
+      ifmDoc: null,
+      href:
+        "https://my.cbg.163.com/cgi/mweb/equip/105/201902131101716-105-M740CVAEL4MY?view_loc=search"
+    };
+  },
   components: { SystemInformation },
   methods: {
     open(link) {
       this.$electron.shell.openExternal(link);
+    },
+    ifmLoad() {
+      this.ifm = $("iframe")[0];
+      let ifmDoc = $("iframe")[0].contentWindow;
+      console.log(ifmDoc);
+    },
+    async get_equip_detail() {
+      try {
+        let dataHref = this.href.split("equip")[1];
+        let dataList = dataHref.split("/");
+        let serverid = dataList[1];
+        let dataInfo = dataList[2];
+        let ordersn = dataInfo.split("?")[0];
+        let view_loc = "all_list";
+        const param = {
+          serverid,
+          ordersn,
+          view_loc
+        };
+        // const host = "https://my.cbg.163.com/cgi";
+        const url = "/api/get_equip_detail";
+        // console.log("===>", this.$http.post);
+        var x = await this.$http.post(url, param);
+        alert(JSON.stringify(x.data));
+        // this.$http.post(url, param);
+      } catch (e) {
+        console.log("===>", e);
+        alert(e);
+      }
     }
+  },
+  created() {
+    // this.get_equip_detail();
   }
 });
 </script>
