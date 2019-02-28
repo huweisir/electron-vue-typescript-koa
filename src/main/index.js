@@ -1,6 +1,5 @@
-import { app, BrowserWindow } from 'electron';
-import httpProxy from 'http-proxy';
-var http = require('http');
+import { app, BrowserWindow, net } from 'electron';
+
 
 
 /**
@@ -16,6 +15,7 @@ const winURL = process.env.NODE_ENV === 'development'
   ? `http://localhost:9090`
   : `file://${__dirname}/index.html`
 
+
 function createWindow() {
   /**
    * Initial window options
@@ -24,30 +24,42 @@ function createWindow() {
     height: 500,
     useContentSize: true,
     width: 1000,
-    webSecurity: false
+    webSecurity: false,
+    webPreferences: { webSecurity: false },
   })
 
   mainWindow.loadURL(winURL);
-  // var proxy = httpProxy.createProxyServer({});
-  // var server = http.createServer(function (req, res) {
-  //   console.log("=====>serve")
-  //   delete req.headers.host;//一定要把host删除，不然会出现404，我在这里踩了好久的坑！
-  //   proxy.web(req, res, { target: 'http://www.baidu.com' });
-  //   proxy.on("proxyRes", () => {
-  //     reqNum--;
-  //     console.log("完成一个请求,当前的剩余的请求数量是 " + reqNum);
-  //   });
-  //   proxy.on("proxyReq", () => {
-  //     reqNum++;
-  //     console.log("接收到一个请求,当前的请求数量是 " + reqNum);
-  //   });
-  // });
+
   const ses = mainWindow.webContents.session
   const config = {
     proxyRules: "http://localhost:9090/;https://my.cbg.163.com/"
   }
   // ses.setProxy(config, (e) => { });
+  // const { net } = require("electron");
+  // let request = net.request("http://localhost:9090");
+  let request = net.request(
+    {
+      method: 'GET',
+      protocol: 'https:',
+      hostname: 'my.cbg.163.com/cgi',
+      port: 9090,
+      path: '/'
+    });
 
+  request.on("response", response => {
+    console.log(`STATUS: ${response.statusCode}`);
+    console.log(`HEADERS: ${JSON.stringify(response.headers)}`);
+
+    response.on("data", chunk => {
+      console.log(`BODY: ${chunk}`);
+    });
+
+    response.on("end", () => {
+      console.log("没有更多数据！");
+    });
+  });
+
+  exports.request1 = request;
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -80,7 +92,6 @@ app.on('activate', () => {
     //     }, 10);
 
     //   }).listen(8008);
-
 
   }
 });
