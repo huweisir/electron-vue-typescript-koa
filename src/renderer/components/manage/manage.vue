@@ -37,12 +37,25 @@
           <br>
           <div>
             <label for>密码</label>
-            <input class="input" type="text" v-model="password">
+            <input
+              class="input"
+              type="text"
+              v-model="password"
+              @input="inputFunc($event,'password')"
+            >
           </div>
+          <br>
           <div>
             <label for>频率</label>
-            <input class="input" type="text" v-model="frequency">
+            <input
+              class="input"
+              type="text"
+              v-model="frequency"
+              @input="inputFunc($event,'frequency')"
+            >
           </div>
+          <br>
+          <h3 style="color:red;">日志:</h3>
           <div class="log">{{log}}</div>
         </div>
       </div>
@@ -100,23 +113,27 @@ export default Vue.extend({
   },
   components: { SystemInformation },
   methods: {
+    inputFunc(e, key) {
+      // localStorage[key]=
+      console.log(e.target.value, key);
+      localStorage[key] = e.target.value;
+    },
     reset() {
       this.location.reload();
     },
     reload() {
       this.href = this.inputurl;
+      var ifm = document.getElementById("iframe");
+      ifm ? (ifm.src = this.href) : null;
     },
     addLog(_log) {
       this.log += `
-      
       ${_log}`;
     },
     gotoPay(url) {
-      // var orderid = order;
       console.log("gotopay===>", url);
       this.onpay = true;
       this.href2 = url;
-      // this.href2 = `https://epay.163.com/cashier/m/standardCashier?orderId=${orderid_from_epay}#/16&key=SHORT_PAY_PASSWORD`;
     },
     open(link) {
       this.$electron.shell.openExternal(link);
@@ -199,6 +216,8 @@ export default Vue.extend({
     }
   },
   created() {
+    this.frequency = localStorage["frequency"] || 100;
+    this.password = localStorage["password"];
     // var proxy = httpProxy.createProxyServer({});
     // this.httpServer = http
     //   .createServer(function(req, res) {
@@ -265,6 +284,9 @@ label {
 .log {
   white-space: pre-line;
   font-size: 13px;
+  max-width: 200px;
+  max-height: 500px;
+  overflow: auto;
 }
 
 .input {

@@ -21,34 +21,39 @@
   }, 100);
 
   function res(data) {
-    if (data.status) {
+    //status 1-未上架，2-公示期,可买 ,3-被下单
+    if (data.status == 1 && data.equip && data.equip.status == 2) {
       equip = data.equip || {};
       var fair_show_end_time = Date.parse(equip.fair_show_end_time);
       var now = Date.now();
       // 提前两秒开始
       var startTime = (fair_show_end_time - now - 2000);
+      startTime = startTime > 0 ? startTime : 0;
       console.log(fair_show_end_time, startTime);
-      // debugger
-      if (startTime) {
-        //预设时间开始
-        var timer2 = setTimeout(() => {
+      //预设时间开始
+      var timer2 = setTimeout(() => {
+        if (startTime > 0) {
           //开始
           var time3 = setInterval(() => {
+            addOrder(function () {
+              clearInterval(time3);
+            });
           }, pwin.infoParams.frequency);
-          addOrder(function () {
-            clearInterval(time3);
-          });
           clearTimeout(timer2);
-        }, fair_show_end_time);
-      } else {
-        startTime = now;
-        addOrder();
-      }
+        } else {
+          startTime = now;
+          addOrder();
+        }
+      }, startTime);
       pwin.showTime(fair_show_end_time);
+    } else {
+      if (data.msg) pwin.addLog(data.msg);
+      if (data.equip && data.equip.status_desc) pwin.addLog(data.equip.status_desc);
     }
   }
   //生成订单
   function addOrder(sec) {
+
     var param = {
       serverid: pwin.infoParams.serverid,
       ordersn: pwin.infoParams.ordersn,
@@ -73,7 +78,7 @@
           get_order_pay_info(order.orderid_to_epay);
         }
         pwin.addLog(log);
-        sec();
+        sec ? sec() : null;
       }
     })
   }
@@ -126,7 +131,14 @@
 
 
 ; (function () {
-  var pwin = window.pwin;
-  document.getElementById("payPassword").value = pwin.infoParams.password;
-  document.getElementById("activeBtn").click();
+  var timer = setInterval(() => {
+    var payPassword = document.getElementById("payPassword");
+    var activeBtn = document.getElementById("activeBtn")
+    var pwin = window.pwin;
+    if (payPassword && activeBtn && pwin) {
+      payPassword.value = pwin.infoParams.password;
+      activeBtn.click();
+      clearInterval(timer);
+    }
+  }, 5)
 })();
