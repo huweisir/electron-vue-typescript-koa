@@ -27,7 +27,7 @@
       var fair_show_end_time = Date.parse(equip.fair_show_end_time);
       var now = Date.now();
       // 提前两秒开始
-      var startTime = (fair_show_end_time - now - 2000);
+      var startTime = (fair_show_end_time - now - 4000);
       startTime = startTime > 0 ? startTime : 0;
       console.log(fair_show_end_time, startTime);
       //预设时间开始
@@ -47,13 +47,12 @@
       }, startTime);
       pwin.showTime(fair_show_end_time);
     } else {
-      if (data.msg) pwin.addLog(data.msg);
-      if (data.equip && data.equip.status_desc) pwin.addLog(data.equip.status_desc);
+      if (data.msg) pwin.addLog("huwei log=> get_equip_detail ===>  结果： " + data.msg);
+      if (data.equip && data.equip.status_desc) pwin.addLog("huwei log=> get_equip_detail ===>  结果： " + data.equip.status_desc);
     }
   }
   //生成订单
   function addOrder(sec) {
-
     var param = {
       serverid: pwin.infoParams.serverid,
       ordersn: pwin.infoParams.ordersn,
@@ -75,15 +74,45 @@
         if (data.msg) {
           log = data.msg;
         } else {
-          get_order_pay_info(order.orderid_to_epay);
+          get_order_detail(order.orderid_to_epay);
         }
-        pwin.addLog(log);
+        pwin.addLog("huwei log=> 下单：addOrder ===>  结果： " + log);
         sec ? sec() : null;
       }
     })
   }
 
-  //生成订单
+  https://my.cbg.163.com/cgi/api/get_order_detail?orderid_to_epay=171_5949
+
+  //获取订单支付详情
+  function get_order_detail(orderid_to_epay) {
+    var param = {
+      orderid_to_epay
+    }
+    $.ajax({
+      url: '/cgi/api/get_order_detail',
+      method: 'GET',
+      data: param,
+      headers: {
+        'Accept': "application/json, text/javascript, */*; q=0.01",
+        'cbg-safe-code': CBG_CONFIG.safeCode,
+      },
+      success: function (data) {
+        console.log("get_order_detail =====> ", data.order);
+        if (data.order && data.order.orderid_from_epay) {
+          var epay_pay_url = "https://epay.163.com/cashier/m/standardCashier?orderId=" + data.order.orderid_from_epay + "#/1&key=INDEX";
+          pwin.addLog("支付链接： " + epay_pay_url);
+          pwin.gotoPay(epay_pay_url);
+        } else {
+          pwin.addLog("get_order_detail =====> 没有订单详情!");
+
+        }
+
+      }
+    })
+  }
+
+  //获取订单支付详情
   function get_order_pay_info(orderid_to_epay) {
     var param = {
       orderid_to_epay
@@ -98,37 +127,14 @@
       },
       success: function (data) {
         console.log("get_order_pay_info=====>", data.pay_info);
-        var epay_pay_url = decodeURI(data.pay_info.epay_pay_url)
+        var epay_pay_url = decodeURI(data.pay_info.epay_pay_url) + "#/1&key=INDEX";
+        pwin.addLog("支付链接： " + epay_pay_url);
         pwin.gotoPay(epay_pay_url);
       }
     })
   }
 
-  //生成订单
-  function previewOrder() {
-    var param = {
-      serverid: pwin.infoParams.serverid,
-      ordersn: pwin.infoParams.ordersn,
-    }
-    $.ajax({
-      url: '/cgi/api/preview_order',
-      method: 'POST',
-      data: param,
-      headers: {
-        'Accept': "application/json, text/javascript, */*; q=0.01",
-        'cbg-safe-code': CBG_CONFIG.safeCode,
-      },
-      success: function (data) {
-        console.log("addOrder=====>", data);
-        var order = data.order
-        pwin.gotoPay(order);
-      }
-    })
-  }
 })();
-
-
-
 
 ; (function () {
   var timer = setInterval(() => {

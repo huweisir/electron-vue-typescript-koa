@@ -100,7 +100,10 @@ export default Vue.extend({
   },
   computed: {
     ifmsrc() {
-      return this.onpay ? this.href2 : this.href;
+      // debugger;
+      var src = this.onpay ? this.href2 : this.href;
+      this.onpay = false;
+      return src;
     },
     startTimeS() {
       var start = new Date(this.startTime) + "";
@@ -132,6 +135,7 @@ export default Vue.extend({
     },
     gotoPay(url) {
       console.log("gotopay===>", url);
+      // return;
       this.onpay = true;
       this.href2 = url;
     },
@@ -144,7 +148,7 @@ export default Vue.extend({
       }
       let splitStr = this.href.split("equip");
       let dataHref =
-        splitStr.length > 1 ? splitStr[1] : this.href.split("order/confirm");
+        splitStr.length > 1 ? splitStr[1] : this.href.split("order/confirm")[1];
       let dataList = dataHref.split("/");
       let serverid = dataList[1];
       let dataInfo = dataList[2];
@@ -191,6 +195,7 @@ export default Vue.extend({
           infoParams: this.param
         };
         this._ifmWin.pwin = pwin;
+        // debugger;
         script2.text = scriptGetTicket;
         // script2.innerText = "";
         _ifmDoc.body.appendChild(script2);
@@ -284,7 +289,8 @@ label {
 .log {
   white-space: pre-line;
   font-size: 13px;
-  max-width: 200px;
+  word-break: break-all;
+  max-width: 300px;
   max-height: 500px;
   overflow: auto;
 }
