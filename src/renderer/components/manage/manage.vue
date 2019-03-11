@@ -72,6 +72,7 @@ import httpProxy from "http-proxy";
 // import xx from "./s.vue";
 import { setTimeout, setImmediate, clearTimeout } from "timers";
 import { scriptGetTicket, scriptPay } from "./script";
+var MD5 = require("../../../lib/md5.js");
 // import "https://code.jquery.com/jquery-3.3.1.min.js";
 
 export default Vue.extend({
@@ -117,8 +118,6 @@ export default Vue.extend({
   components: { SystemInformation },
   methods: {
     inputFunc(e, key) {
-      // localStorage[key]=
-      console.log(e.target.value, key);
       localStorage[key] = e.target.value;
     },
     reset() {
@@ -223,6 +222,7 @@ export default Vue.extend({
   created() {
     this.frequency = localStorage["frequency"] || 100;
     this.password = localStorage["password"];
+    console.log(MD5(111111));
     // var proxy = httpProxy.createProxyServer({});
     // this.httpServer = http
     //   .createServer(function(req, res) {

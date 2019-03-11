@@ -74,7 +74,8 @@
         if (data.msg) {
           log = data.msg;
         } else {
-          get_order_detail(order.orderid_to_epay);
+          // get_order_detail(order.orderid_to_epay);
+          get_order_pay_info(order.orderid_to_epay);
         }
         pwin.addLog("huwei log=> 下单：addOrder ===>  结果： " + log);
         sec ? sec() : null;
@@ -82,7 +83,7 @@
     })
   }
 
-  https://my.cbg.163.com/cgi/api/get_order_detail?orderid_to_epay=171_5949
+  // https://my.cbg.163.com/cgi/api/get_order_detail?orderid_to_epay=171_5949
 
   //获取订单支付详情
   function get_order_detail(orderid_to_epay) {
