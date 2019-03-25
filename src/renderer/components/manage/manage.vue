@@ -70,7 +70,13 @@ import http from "http";
 import httpProxy from "http-proxy";
 // require();
 // import xx from "./s.vue";
-import { setTimeout, setImmediate, clearTimeout } from "timers";
+// import {
+//   setTimeout,
+//   setImmediate,
+//   clearTimeout,
+//   setInterval,
+//   clearInterval
+// } from "timers";
 import { scriptGetTicket, scriptPay } from "./script";
 var MD5 = require("../../../lib/md5.js");
 // import "https://code.jquery.com/jquery-3.3.1.min.js";
@@ -82,6 +88,7 @@ export default Vue.extend({
       ifm: null,
       _ifmDoc: null,
       _ifmWin: null,
+      CBG_CONFIG: {},
       httpServer: null,
       startTime: 0, //开始时间
       //抢票链接
@@ -141,6 +148,66 @@ export default Vue.extend({
     open(link) {
       this.$electron.shell.openExternal(link);
     },
+    async get_equip_detail() {
+      let res = await this.$http({
+        url: "/get_equip_detail",
+        method: "POST", // 默认是 get
+        baseURL: "https://my.cbg.163.com/cgi/api/",
+        headers: {
+          // "cbg-safe-code": this.CBG_CONFIG.safeCode,
+          cbg_flag: "https://my.cbg.163.com/cgi/api/",
+          x_Referer: this.ifmsrc
+        },
+        params: {
+          serverid: this.param.serverid,
+          ordersn: this.param.ordersn,
+          view_loc: "all_list"
+        }
+      });
+      this.addOrder(res.data.equip);
+    },
+    //生成订单
+    async addOrder(equip, sec) {
+      let pwin = {
+        //function
+        showTime: this.showTime,
+        gotoPay: this.gotoPay,
+        addLog: this.addLog,
+        // data
+        infoParams: this.param
+      };
+      var param = {
+        serverid: this.param.serverid,
+        ordersn: this.param.ordersn,
+        confirm_price_total: equip.price,
+        view_loc: "msg"
+      };
+      let data = await this.$http({
+        url: "/add_order",
+        method: "POST", // 默认是 get
+        baseURL: "https://my.cbg.163.com/cgi/api/",
+        headers: {
+          // "cbg-safe-code": this.CBG_CONFIG.safeCode,
+          cbg_flag: "https://my.cbg.163.com/cgi/api/",
+          x_Referer: this.ifmsrc
+        },
+        data: {
+          serverid: this.param.serverid,
+          ordersn: this.param.ordersn,
+          view_loc: "all_list"
+        }
+      });
+      var order = data.order;
+      var log = "成功";
+      if (data.msg) {
+        log = data.msg;
+      } else {
+        // get_order_detail(order.orderid_to_epay);
+        // get_order_pay_info(order.orderid_to_epay);
+      }
+      pwin.addLog("huwei log=> 下单：addOrder ===>  结果： " + log);
+      sec ? sec() : null;
+    },
     getParams() {
       if (this.inputurl) {
         this.href = this.inputurl;
@@ -159,6 +226,7 @@ export default Vue.extend({
         view_loc
       };
       this.param = param;
+      this.get_equip_detail();
     },
     ifmLoad() {
       this.ifm = document.getElementById("iframe");
@@ -166,9 +234,11 @@ export default Vue.extend({
       let _ifmWin = document.getElementById("iframe").contentWindow;
       this._ifmDoc = _ifmDoc;
       this._ifmWin = _ifmWin;
+      this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
+      console.log(this._ifmWin);
       let script1 = document.createElement("script");
       script1.src = "https://code.jquery.com/jquery-3.3.1.min.js";
-      _ifmDoc.body.appendChild(script1);
+      // _ifmDoc.body.appendChild(script1);
       let script2 = document.createElement("script");
       if (this.onpay) {
         script2.text = scriptPay;
@@ -182,9 +252,17 @@ export default Vue.extend({
         };
         this._ifmWin.pwin = pwin;
         _ifmDoc.body.appendChild(script2);
-        return;
       } else {
         this.getParams();
+        var timer2 = setInterval(() => {
+          // debugger;
+          console.log("setInterval===> dasda");
+          if (this.CBG_CONFIG.safeCode) {
+            clearInterval(timer2);
+          } else {
+            this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
+          }
+        }, 100);
         let pwin = {
           //function
           showTime: this.showTime,
@@ -193,6 +271,7 @@ export default Vue.extend({
           // data
           infoParams: this.param
         };
+        return;
         this._ifmWin.pwin = pwin;
         // debugger;
         script2.text = scriptGetTicket;
@@ -210,36 +289,11 @@ export default Vue.extend({
     showTime(_time) {
       console.log("===>showTime", _time);
       this.startTime = _time;
-    },
-    async get_equip_detail() {
-      try {
-      } catch (e) {
-        console.log("===>", e);
-        alert("网址不对");
-      }
     }
   },
   created() {
     this.frequency = localStorage["frequency"] || 100;
     this.password = localStorage["password"];
-    console.log(MD5(111111));
-    // var proxy = httpProxy.createProxyServer({});
-    // this.httpServer = http
-    //   .createServer(function(req, res) {
-    //     delete req.headers.host; //一定要把host删除，不然会出现404，我在这里踩了好久的坑！
-    //     proxy.web(req, res, { target: "http://www.baidu.com" });
-    //     proxy.on("proxyRes", () => {
-    //       reqNum--;
-    //       console.log("完成一个请求,当前的剩余的请求数量是 " + reqNum);
-    //     });
-    //     proxy.on("proxyReq", () => {
-    //       reqNum++;
-    //       console.log("接收到一个请求,当前的请求数量是 " + reqNum);
-    //     });
-    //   })
-    //   .listen(9000);
-    // console.log("=====>serve", module);
-    // alert(JSON.stringify(location));
   },
   beforeDestroy() {
     // this.httpServer.end();

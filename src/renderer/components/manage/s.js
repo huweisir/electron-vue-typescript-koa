@@ -15,7 +15,7 @@
       },
       function (data) {
         console.log(data);
-        res(data);
+        // res(data);
       }
     );
   }, 100);

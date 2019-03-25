@@ -107,12 +107,17 @@ function createWindow() {
   /**
    * Initial window options
    */
-
   session.defaultSession.webRequest.onBeforeSendHeaders({}, function (details, callback) {
-    details.requestHeaders['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1";
-    // details.requestHeaders['Origin'] = "www.baidu.com"
-    callback({ cancel: false, requestHeaders: details.requestHeaders });
-    console.log("====>onBeforeSendHeaders", details.requestHeaders)
+    var headers = details.requestHeaders
+    headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1";
+    if (headers.hasOwnProperty("cbg_flag")) {
+      headers['Origin'] = "https://my.cbg.163.com";
+      headers["Referer"] = headers["x_Referer"];
+      headers['Host'] = "my.cbg.163.com";
+      delete headers['cbg_flag'];
+      console.log("====>onBeforeSendHeaders", headers)
+    }
+    callback({ cancel: false, requestHeaders: headers });
   });
   mainWindow = new BrowserWindow({
     height: 500,
