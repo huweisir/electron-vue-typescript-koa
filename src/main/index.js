@@ -1,5 +1,4 @@
-import { app, BrowserWindow, net, Menu, session } from 'electron';
-
+import { app, BrowserWindow, net, Menu, session, ipcMain } from 'electron';
 
 
 /**
@@ -107,18 +106,45 @@ function createWindow() {
   /**
    * Initial window options
    */
+  // session.defaultSession.webRequest.onHeadersReceived({}, function (detail, callback) {
+  //   if (detail.responseHeaders.hasOwnProperty("location")) {
+  //     console.log('====>onHeadersReceived    location', detail.responseHeaders.location)
+  //   }
+  //   console.log('====>onHeadersReceived    location', detail.responseHeaders)
+
+  //   callback(detail)
+  // })
+
+  session.defaultSession.webRequest.onBeforeRequest({}, function (details, callback) {
+    var headers = details.requestHeaders;
+    // console.log("onBeforeRequest===>", details)
+    if (details.url && details.url.indexOf("epay.163.com/cashier/m/standardCashier") > -1) {
+      console.log("onBeforeRequest===>", details.url)
+      var orderIdstr = details.url.split("?")[1];
+      var orderId = orderIdstr.split("=")[1];
+      webC.send('asynchronous-reply', orderId)
+      // https://epay.163.com/cashier/m/standardCashier?orderId=2019032910JY23345734
+    }
+    callback(details)
+  })
+
+
   session.defaultSession.webRequest.onBeforeSendHeaders({}, function (details, callback) {
     var headers = details.requestHeaders
     headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1";
-    if (headers.hasOwnProperty("cbg_flag")) {
-      headers['Origin'] = "https://my.cbg.163.com";
-      headers["Referer"] = headers["x_Referer"];
-      headers['Host'] = "my.cbg.163.com";
-      delete headers['cbg_flag'];
-      console.log("====>onBeforeSendHeaders", headers)
+    if (headers.hasOwnProperty("my_info")) {
+      var my_info = JSON.parse(headers['my_info']);
+      for (var key in my_info) {
+        headers[key] = my_info[key];
+      }
+      delete headers['my_info'];
+    }
+    if (headers.hasOwnProperty("upgrade-insecure-requests")) {
+      console.log("onBeforeSendHeaders===>  upgrade-insecure-requests", headers);
     }
     callback({ cancel: false, requestHeaders: headers });
   });
+
   mainWindow = new BrowserWindow({
     height: 500,
     useContentSize: true,
@@ -129,13 +155,14 @@ function createWindow() {
 
   mainWindow.loadURL(winURL);
 
+  // mainWindow.webContents.debugger.on('message', (event, method, params) => {
+  //   console.log('message==============>', event, params)
+  // });
+
   const ses = mainWindow.webContents.session;
-  const config = {
-    proxyRules: "http://localhost:9090/;https://my.cbg.163.com/"
-  }
-  // ses.setProxy(config, (e) => { });
-  // const { net } = require("electron");
-  // let request = net.request("http://localhost:9090");
+  const webC = mainWindow.webContents.webContents;
+
+
   let request = net.request(
     {
       method: 'GET',

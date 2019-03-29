@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import axios from 'axios';
+import * as $ from 'jquery';
 
 import App from './App.vue';
 import router from './router';
@@ -8,6 +9,7 @@ const vueElectron = require('vue-electron')
 
 if (!process.env.IS_WEB) Vue.use(vueElectron);
 (Vue as any).http = Vue.prototype.$http = axios;
+(Vue as any).$ = Vue.prototype.$ = $;
 Vue.config.productionTip = false;
 
 /* eslint-disable no-new */

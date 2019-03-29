@@ -149,3 +149,34 @@
     }
   }, 5)
 })();
+
+
+function pay() {
+  var time = Date.now();
+  var params = {
+    accept: "*/*",
+    "accept-encoding": "gzip, deflate, br",
+    "content-length": 149,
+    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+    Referer: "https://epay.163.com/cashier/m/standardCashier?orderId=2019032516JY49105176", //referer
+    Host: "my.cbg.163.com",
+    Origin: "https://epay.163.com"
+  }
+
+  let data = await this.$http({
+    url: "/verifyPayItems",
+    method: "POST", // 默认是 get
+    baseURL: "https://my.cbg.163.com/cgi/api/",
+    headers: {
+      my_info: {
+        ...params
+      },
+    },
+    data: { v: time },
+    params: {
+      securityValid: { "shortPayPassword": "b7f6593421d9f21bdd5caef01b24f5c8" },
+      orderId: "2019032516JY49105176",
+      envData: { "term": "wap" }
+    }
+  });
+}

@@ -68,6 +68,7 @@ import SystemInformation from "../LandingPage/SystemInformation";
 import Vue from "vue";
 import http from "http";
 import httpProxy from "http-proxy";
+const { ipcRenderer } = require("electron");
 // require();
 // import xx from "./s.vue";
 // import {
@@ -79,7 +80,6 @@ import httpProxy from "http-proxy";
 // } from "timers";
 import { scriptGetTicket, scriptPay } from "./script";
 var MD5 = require("../../../lib/md5.js");
-// import "https://code.jquery.com/jquery-3.3.1.min.js";
 
 export default Vue.extend({
   name: "LandingPage",
@@ -108,7 +108,6 @@ export default Vue.extend({
   },
   computed: {
     ifmsrc() {
-      // debugger;
       var src = this.onpay ? this.href2 : this.href;
       this.onpay = false;
       return src;
@@ -154,7 +153,7 @@ export default Vue.extend({
         method: "POST", // 默认是 get
         baseURL: "https://my.cbg.163.com/cgi/api/",
         headers: {
-          // "cbg-safe-code": this.CBG_CONFIG.safeCode,
+          "cbg-safe-code": this.CBG_CONFIG.safeCode,
           cbg_flag: "https://my.cbg.163.com/cgi/api/",
           x_Referer: this.ifmsrc
         },
@@ -168,45 +167,63 @@ export default Vue.extend({
     },
     //生成订单
     async addOrder(equip, sec) {
-      let pwin = {
-        //function
-        showTime: this.showTime,
-        gotoPay: this.gotoPay,
-        addLog: this.addLog,
-        // data
-        infoParams: this.param
-      };
       var param = {
         serverid: this.param.serverid,
         ordersn: this.param.ordersn,
         confirm_price_total: equip.price,
         view_loc: "msg"
       };
-      let data = await this.$http({
+      let res = await this.$http({
         url: "/add_order",
         method: "POST", // 默认是 get
         baseURL: "https://my.cbg.163.com/cgi/api/",
         headers: {
-          // "cbg-safe-code": this.CBG_CONFIG.safeCode,
-          cbg_flag: "https://my.cbg.163.com/cgi/api/",
-          x_Referer: this.ifmsrc
+          "cbg-safe-code": this.CBG_CONFIG.safeCode,
+          my_info: JSON.stringify({
+            Referer: this.ifmsrc, //referer
+            Host: "my.cbg.163.com",
+            Origin: "https://my.cbg.163.com"
+          })
+          // x_Referer: this.ifmsrc //referer
         },
-        data: {
+        params: {
           serverid: this.param.serverid,
+          confirm_price_total: equip.price,
           ordersn: this.param.ordersn,
           view_loc: "all_list"
         }
       });
-      var order = data.order;
+      var data = res.data;
       var log = "成功";
       if (data.msg) {
         log = data.msg;
       } else {
-        // get_order_detail(order.orderid_to_epay);
-        // get_order_pay_info(order.orderid_to_epay);
+        this.get_order_pay_info(data.order.orderid_to_epay);
       }
-      pwin.addLog("huwei log=> 下单：addOrder ===>  结果： " + log);
+      this.addLog("huwei log=> 下单：addOrder ===>  结果： " + log);
       sec ? sec() : null;
+    },
+    async get_order_pay_info(orderid_to_epay) {
+      let res = await this.$http({
+        url: "/get_order_pay_info",
+        method: "POST", // 默认是 get
+        baseURL: "https://my.cbg.163.com/cgi/api/",
+        headers: {
+          "cbg-safe-code": this.CBG_CONFIG.safeCode,
+
+          my_info: JSON.stringify({
+            Referer: this.ifmsrc, //referer
+            Host: "my.cbg.163.com",
+            Origin: "https://my.cbg.163.com"
+          })
+        },
+        params: {
+          orderid_to_epay,
+          view_loc: "all_list"
+        }
+      });
+      let data = res.data;
+      let url = data.pay_info.url;
     },
     getParams() {
       if (this.inputurl) {
@@ -226,7 +243,51 @@ export default Vue.extend({
         view_loc
       };
       this.param = param;
-      this.get_equip_detail();
+      if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
+        this.get_equip_detail();
+      }
+    },
+    async payOrder(orderId) {
+      var time = Date.now();
+      var params = {
+        accept: "*/*",
+        "accept-encoding": "gzip, deflate, br",
+        "content-length": 149,
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        Referer: `https://epay.163.com/cashier/m/standardCashier?orderId=${orderId}`, //referer
+        Host: "my.cbg.163.com",
+        Origin: "https://epay.163.com"
+      };
+
+      let data = await this.$http({
+        url: "/verifyPayItems",
+        method: "POST", // 默认是 get
+        baseURL: "https://epay.163.com/cashier/m/security/",
+        transformRequest: [
+          function(data) {
+            let ret = "";
+            for (let it in data) {
+              ret +=
+                encodeURIComponent(it) +
+                "=" +
+                encodeURIComponent(data[it]) +
+                "&";
+            }
+            return ret;
+          }
+        ],
+        headers: {
+          my_info: JSON.stringify(params)
+        },
+        params: { v: time },
+        data: {
+          securityValid: JSON.parse({
+            shortPayPassword: "b7f6593421d9f21bdd5caef01b24f5c8"
+          }),
+          orderId,
+          envData: JSON.parse({ term: "wap" })
+        }
+      });
     },
     ifmLoad() {
       this.ifm = document.getElementById("iframe");
@@ -255,7 +316,6 @@ export default Vue.extend({
       } else {
         this.getParams();
         var timer2 = setInterval(() => {
-          // debugger;
           console.log("setInterval===> dasda");
           if (this.CBG_CONFIG.safeCode) {
             clearInterval(timer2);
@@ -273,7 +333,6 @@ export default Vue.extend({
         };
         return;
         this._ifmWin.pwin = pwin;
-        // debugger;
         script2.text = scriptGetTicket;
         // script2.innerText = "";
         _ifmDoc.body.appendChild(script2);
@@ -294,6 +353,12 @@ export default Vue.extend({
   created() {
     this.frequency = localStorage["frequency"] || 100;
     this.password = localStorage["password"];
+    ipcRenderer.on("asynchronous-reply", (event, arg) => {
+      //渲染进程接收主进程响应回来的处理结果
+      console.log(event, arg);
+      this.payOrder(arg);
+      // ​console.log("ipcRenderer===>",event,arg) // prints "pong"
+    });
   },
   beforeDestroy() {
     // this.httpServer.end();
