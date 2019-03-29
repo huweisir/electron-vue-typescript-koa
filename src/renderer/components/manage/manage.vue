@@ -23,9 +23,9 @@
           </div>
           <br>
           <div>
-            <button @click="reload();">刷新页面</button>
-            <button @click="reset();">重置</button>
-            <!-- <button @click="reload();">刷新页面</button> -->
+            <button @click="reset();">刷新页面</button>
+            <!-- <button @click="reset();">重置</button> -->
+            <button @click="validate();">验证手机号</button>
           </div>
         </div>
         <br>
@@ -46,12 +46,22 @@
           </div>
           <br>
           <div>
-            <label for>频率</label>
+            <label for>频率(次/ms)</label>
             <input
               class="input"
               type="text"
               v-model="frequency"
               @input="inputFunc($event,'frequency')"
+            >
+          </div>
+          <br>
+          <div>
+            <label for>提前多少毫秒</label>
+            <input
+              class="input"
+              type="text"
+              v-model="advanceTime"
+              @input="inputFunc($event,'advanceTime')"
             >
           </div>
           <br>
@@ -69,6 +79,8 @@ import Vue from "vue";
 import http from "http";
 import httpProxy from "http-proxy";
 import { scriptGetTicket, scriptPay } from "./script";
+import { setTimeout, clearTimeout, setInterval, clearInterval } from "timers";
+import { debug } from "util";
 
 const { ipcRenderer } = require("electron");
 const MD5 = require("../../../lib/md5.js");
@@ -81,9 +93,13 @@ export default Vue.extend({
       _ifmDoc: null,
       _ifmWin: null,
       CBG_CONFIG: {},
-      httpServer: null,
-      startTime: 0, //开始时间
-      //抢票链接
+      // 是否是验证手机号
+      validatePhoneCode: false,
+      // 账号信息
+      accountData: {},
+      // 开始时间
+      startTime: 0,
+      // 抢票链接
       href: "",
       //支付页链接
       href2: "",
@@ -94,8 +110,10 @@ export default Vue.extend({
       inputurl: "",
       // 密码
       password: "",
-      //频率默认100
-      frequency: 100
+      //频率默认100ms
+      frequency: 10,
+      // 提前多少时间开始刷接口
+      advanceTime: 1000
     };
   },
   computed: {
@@ -105,11 +123,12 @@ export default Vue.extend({
       return src;
     },
     startTimeS() {
-      var start = new Date(this.startTime) + "";
+      var start = new Date(this.startTime - this.advanceTime) + "";
       return start.replace(/\T|Z/g, "  ");
     },
     startTimeC() {
-      var start = new Date(this.startTime + 2000) + "";
+      // debugger;
+      var start = new Date(this.startTime) + "";
       return start.replace(/\T|Z/g, "  ");
     }
   },
@@ -119,13 +138,18 @@ export default Vue.extend({
       localStorage[key] = e.target.value;
     },
     reset() {
-      this.location.reload();
+      this.validatePhoneCode = false;
+      this.reload();
     },
     //重载iframe
     reload() {
       this.href = this.inputurl;
       var ifm = document.getElementById("iframe");
       ifm ? (ifm.src = this.href) : null;
+    },
+    validate() {
+      this.validatePhoneCode = true;
+      this.reload();
     },
     //页面输出log
     addLog(_log) {
@@ -137,8 +161,72 @@ export default Vue.extend({
       console.log("gotopay===>", url);
       this.href2 = url;
     },
+    //计时抢票
+    async getTicket(equip) {
+      const fair_show_end_time = equip.fair_show_end_time || 0;
+      const onlineStartTime = Date.parse(fair_show_end_time);
+      this.startTime = onlineStartTime;
+      // const nowTime = await this.getStandardTime();
+      const nowTime = Date.now();
+      // debugger;
+      let orderid_to_epay = "";
+      if (onlineStartTime - +this.advanceTime > +nowTime) {
+        // 没到抢票时间
+        const parse = onlineStartTime - nowTime;
+        let times = 0;
+        var timer1 = setTimeout(() => {
+          var timer2 = setInterval(async () => {
+            // 提交订单
+            orderid_to_epay = await this.addOrder(equip, () => {
+              //成功结束或者失败
+              clearInterval(timer2);
+            });
+            let url = orderid_to_epay
+              ? await this.get_order_pay_info(orderid_to_epay)
+              : null;
+            if (url) {
+              this.onpay = true;
+              this.gotoPay(url);
+            }
+            if (this.frequency * times - this.advanceTime > 5000) {
+              //超时5秒自动结束
+              clearInterval(timer2);
+            }
+            // this.
+          }, this.frequency);
+          clearTimeout(timer1);
+        }, parse - this.advanceTime);
+      } else {
+        orderid_to_epay = await this.addOrder(equip, () => {
+          //成功结束或者失败
+        });
+        // debugger;
+        let url = orderid_to_epay
+          ? await this.get_order_pay_info(orderid_to_epay)
+          : null;
+        if (url) {
+          this.onpay = true;
+          this.gotoPay(url);
+        }
+      }
+    },
     open(link) {
       this.$electron.shell.openExternal(link);
+    },
+    async getStandardTime() {
+      //校准时间搓，获取当前时间
+      let res = await this.$http.get(
+        "http://api.k780.com:88/?app=life.time&appkey=10003&sign=b59bc3ef6191eb9f747dd4e83c99f2a4&format=json"
+      );
+      let nowTime = Date.now();
+      if (res.data) {
+        // 如果接口返回了时间，则用返回的时间，不然用当前本地时间
+        nowTime = res.data.result
+          ? res.data.result.timestamp || Date.now()
+          : Date.now();
+      }
+      return nowTime;
+      console.log(res);
     },
     //获取商品详情接口
     async get_equip_detail() {
@@ -158,13 +246,15 @@ export default Vue.extend({
         }
       });
       let back;
-      if (res && res.data && res.data.equip) {
+      let resData = res.data || {};
+      if (resData && resData.equip) {
+        this.accountData = resData;
         back = res.data.equip;
       }
       return back;
     },
     //生成订单
-    async addOrder(equip) {
+    async addOrder(equip, callback) {
       let res = await this.$http({
         url: "/add_order",
         method: "POST", // 默认是 get
@@ -184,16 +274,20 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
-      let data = res.data;
+      let data = res.data || {};
       let log = "下单成功";
       let back;
+      let orderid_to_epay;
       if (data.msg) {
         log = data.msg;
       } else {
-        back = data.order.orderid_to_epay;
+        orderid_to_epay = data.order.orderid_to_epay;
       }
       this.addLog("下单：addOrder ===> 结果：" + log);
-      return back;
+      if (data.code == 200) {
+        if (callback) callback();
+      }
+      return orderid_to_epay;
     },
     // 获取订单详情接口
     async get_order_pay_info(orderid_to_epay) {
@@ -214,9 +308,14 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
+      // debugger;
       let data = res.data || {};
       // 拿到支付URL
-      let url = data.pay_info && data.pay_info.url ? (this.onpay = true) : null;
+      let url =
+        data.pay_info && data.pay_info.epay_pay_url
+          ? data.pay_info.epay_pay_url
+          : "";
+      this.onpay = true;
       return url;
     },
     // 获取页面信息的接口
@@ -280,7 +379,7 @@ export default Vue.extend({
         // 这里是form data表单数据
         data: {
           securityValid: JSON.stringify({
-            shortPayPassword: "b7f6593421d9f21bdd5caef01b24f5c8"
+            shortPayPassword: MD5(this.password)
           }),
           orderId,
           envData: JSON.stringify({ term: "wap" })
@@ -296,25 +395,14 @@ export default Vue.extend({
       this._ifmDoc = _ifmDoc;
       this._ifmWin = _ifmWin;
       /* *********************************************** */
-      if (!this.onpay) {
-        //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
+      //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
+      if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.getParams();
-        if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
-          // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
-          let equip = await this.get_equip_detail();
-          // 下单
-          let orderid_to_epay = equip ? await this.addOrder(equip) : null;
-          // 获取订单信息
-          let url = orderid_to_epay
-            ? this.get_order_pay_info(orderid_to_epay)
-            : null;
-          //确认需要支付支付页面
-          if (url) {
-            this.onpay = true;
-            this.gotoPay(url);
-          }
-        }
+        // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
+        let equip = await this.get_equip_detail();
+        // 下单
+        let orderid_to_epay = equip ? await this.getTicket(equip) : null;
         var timer2 = setInterval(() => {
           if (this.CBG_CONFIG.safeCode) {
             // 如果安全码已存在，定时器结束
@@ -323,15 +411,25 @@ export default Vue.extend({
             this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
           }
         }, 100);
+      } else {
+        let balanceLi = this._ifmDoc.getElementById("balanceLi");
+        balanceLi.click();
       }
     },
     showTime(_time) {
       this.startTime = _time;
+    },
+    //初始化本地数据
+    initLocal() {
+      this.frequency = localStorage["frequency"] || 100;
+      this.password = localStorage["password"];
+      this.password = localStorage["password"];
     }
   },
   created() {
-    this.frequency = localStorage["frequency"] || 100;
-    this.password = localStorage["password"];
+    this.getStandardTime();
+    //初始化本地数据
+    this.initLocal();
     ipcRenderer.on("asynchronous-reply", (event, arg) => {
       //渲染进程接收主进程响应回来的处理结果
       Object.keys(arg).forEach(ele => {
@@ -339,7 +437,12 @@ export default Vue.extend({
         switch (key) {
           case "orderId":
             //带了orderId时，需要调用支付接口
-            this.payOrder(arg[key]);
+            console.log(MD5(this.password));
+            // debugger;
+            if (this.validatePhoneCode) {
+            } else {
+              this.payOrder(arg[key]);
+            }
             break;
           default:
         }

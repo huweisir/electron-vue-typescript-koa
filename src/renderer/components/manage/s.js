@@ -106,9 +106,7 @@
           pwin.gotoPay(epay_pay_url);
         } else {
           pwin.addLog("get_order_detail =====> 没有订单详情!");
-
         }
-
       }
     })
   }
