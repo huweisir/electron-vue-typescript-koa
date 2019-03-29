@@ -68,18 +68,10 @@ import SystemInformation from "../LandingPage/SystemInformation";
 import Vue from "vue";
 import http from "http";
 import httpProxy from "http-proxy";
-const { ipcRenderer } = require("electron");
-// require();
-// import xx from "./s.vue";
-// import {
-//   setTimeout,
-//   setImmediate,
-//   clearTimeout,
-//   setInterval,
-//   clearInterval
-// } from "timers";
 import { scriptGetTicket, scriptPay } from "./script";
-var MD5 = require("../../../lib/md5.js");
+
+const { ipcRenderer } = require("electron");
+const MD5 = require("../../../lib/md5.js");
 
 export default Vue.extend({
   name: "LandingPage",
@@ -129,24 +121,26 @@ export default Vue.extend({
     reset() {
       this.location.reload();
     },
+    //重载iframe
     reload() {
       this.href = this.inputurl;
       var ifm = document.getElementById("iframe");
       ifm ? (ifm.src = this.href) : null;
     },
+    //页面输出log
     addLog(_log) {
       this.log += `
       ${_log}`;
     },
+    // iframe页面跳转
     gotoPay(url) {
       console.log("gotopay===>", url);
-      // return;
-      this.onpay = true;
       this.href2 = url;
     },
     open(link) {
       this.$electron.shell.openExternal(link);
     },
+    //获取商品详情接口
     async get_equip_detail() {
       let res = await this.$http({
         url: "/get_equip_detail",
@@ -163,16 +157,14 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
-      this.addOrder(res.data.equip);
+      let back;
+      if (res && res.data && res.data.equip) {
+        back = res.data.equip;
+      }
+      return back;
     },
     //生成订单
-    async addOrder(equip, sec) {
-      var param = {
-        serverid: this.param.serverid,
-        ordersn: this.param.ordersn,
-        confirm_price_total: equip.price,
-        view_loc: "msg"
-      };
+    async addOrder(equip) {
       let res = await this.$http({
         url: "/add_order",
         method: "POST", // 默认是 get
@@ -184,7 +176,6 @@ export default Vue.extend({
             Host: "my.cbg.163.com",
             Origin: "https://my.cbg.163.com"
           })
-          // x_Referer: this.ifmsrc //referer
         },
         params: {
           serverid: this.param.serverid,
@@ -193,16 +184,18 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
-      var data = res.data;
-      var log = "成功";
+      let data = res.data;
+      let log = "下单成功";
+      let back;
       if (data.msg) {
         log = data.msg;
       } else {
-        this.get_order_pay_info(data.order.orderid_to_epay);
+        back = data.order.orderid_to_epay;
       }
-      this.addLog("huwei log=> 下单：addOrder ===>  结果： " + log);
-      sec ? sec() : null;
+      this.addLog("下单：addOrder ===> 结果：" + log);
+      return back;
     },
+    // 获取订单详情接口
     async get_order_pay_info(orderid_to_epay) {
       let res = await this.$http({
         url: "/get_order_pay_info",
@@ -210,7 +203,6 @@ export default Vue.extend({
         baseURL: "https://my.cbg.163.com/cgi/api/",
         headers: {
           "cbg-safe-code": this.CBG_CONFIG.safeCode,
-
           my_info: JSON.stringify({
             Referer: this.ifmsrc, //referer
             Host: "my.cbg.163.com",
@@ -222,9 +214,12 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
-      let data = res.data;
-      let url = data.pay_info.url;
+      let data = res.data || {};
+      // 拿到支付URL
+      let url = data.pay_info && data.pay_info.url ? (this.onpay = true) : null;
+      return url;
     },
+    // 获取页面信息的接口
     getParams() {
       if (this.inputurl) {
         this.href = this.inputurl;
@@ -233,8 +228,10 @@ export default Vue.extend({
       let dataHref =
         splitStr.length > 1 ? splitStr[1] : this.href.split("order/confirm")[1];
       let dataList = dataHref.split("/");
+      // 拿到serverid
       let serverid = dataList[1];
       let dataInfo = dataList[2];
+      // 拿到ordersn
       let ordersn = dataInfo.split("?")[0];
       let view_loc = "all_list";
       const param = {
@@ -243,13 +240,12 @@ export default Vue.extend({
         view_loc
       };
       this.param = param;
-      if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
-        this.get_equip_detail();
-      }
     },
+    // 付款接口
     async payOrder(orderId) {
-      var time = Date.now();
+      const time = Date.now();
       var params = {
+        // 头部的一些信息
         accept: "*/*",
         "accept-encoding": "gzip, deflate, br",
         "content-length": 149,
@@ -258,12 +254,12 @@ export default Vue.extend({
         Host: "my.cbg.163.com",
         Origin: "https://epay.163.com"
       };
-
       let data = await this.$http({
         url: "/verifyPayItems",
         method: "POST", // 默认是 get
         baseURL: "https://epay.163.com/cashier/m/security/",
         transformRequest: [
+          // form data提交数据时的一种处理，防止405
           function(data) {
             let ret = "";
             for (let it in data) {
@@ -279,74 +275,57 @@ export default Vue.extend({
         headers: {
           my_info: JSON.stringify(params)
         },
+        // 这边需要一个时间搓
         params: { v: time },
+        // 这里是form data表单数据
         data: {
-          securityValid: JSON.parse({
+          securityValid: JSON.stringify({
             shortPayPassword: "b7f6593421d9f21bdd5caef01b24f5c8"
           }),
           orderId,
-          envData: JSON.parse({ term: "wap" })
+          envData: JSON.stringify({ term: "wap" })
         }
       });
     },
-    ifmLoad() {
+    async ifmLoad() {
+      // iframe加载完成后执行逻辑
+      /* ********  获取iframe的 window 和 document  ********** */
       this.ifm = document.getElementById("iframe");
       let _ifmDoc = document.getElementById("iframe").contentDocument;
       let _ifmWin = document.getElementById("iframe").contentWindow;
       this._ifmDoc = _ifmDoc;
       this._ifmWin = _ifmWin;
-      this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
-      console.log(this._ifmWin);
-      let script1 = document.createElement("script");
-      script1.src = "https://code.jquery.com/jquery-3.3.1.min.js";
-      // _ifmDoc.body.appendChild(script1);
-      let script2 = document.createElement("script");
-      if (this.onpay) {
-        script2.text = scriptPay;
-        let pwin = {
-          //function
-          // data
-          infoParams: {
-            password: this.password,
-            frequency: this.frequency
-          }
-        };
-        this._ifmWin.pwin = pwin;
-        _ifmDoc.body.appendChild(script2);
-      } else {
+      /* *********************************************** */
+      if (!this.onpay) {
+        //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
+        this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.getParams();
+        if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
+          // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
+          let equip = await this.get_equip_detail();
+          // 下单
+          let orderid_to_epay = equip ? await this.addOrder(equip) : null;
+          // 获取订单信息
+          let url = orderid_to_epay
+            ? this.get_order_pay_info(orderid_to_epay)
+            : null;
+          //确认需要支付支付页面
+          if (url) {
+            this.onpay = true;
+            this.gotoPay(url);
+          }
+        }
         var timer2 = setInterval(() => {
-          console.log("setInterval===> dasda");
           if (this.CBG_CONFIG.safeCode) {
+            // 如果安全码已存在，定时器结束
             clearInterval(timer2);
           } else {
             this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
           }
         }, 100);
-        let pwin = {
-          //function
-          showTime: this.showTime,
-          gotoPay: this.gotoPay,
-          addLog: this.addLog,
-          // data
-          infoParams: this.param
-        };
-        return;
-        this._ifmWin.pwin = pwin;
-        script2.text = scriptGetTicket;
-        // script2.innerText = "";
-        _ifmDoc.body.appendChild(script2);
-        _ifmWin.post = function() {
-          // console.log("post+++>", _ifmWin.location.href);
-          $.ajax({
-            type: "post",
-            url: "https://my.cbg.163.com/cgi/api/get_equip_detail"
-          });
-        };
       }
     },
     showTime(_time) {
-      console.log("===>showTime", _time);
       this.startTime = _time;
     }
   },
@@ -355,14 +334,19 @@ export default Vue.extend({
     this.password = localStorage["password"];
     ipcRenderer.on("asynchronous-reply", (event, arg) => {
       //渲染进程接收主进程响应回来的处理结果
-      console.log(event, arg);
-      this.payOrder(arg);
-      // ​console.log("ipcRenderer===>",event,arg) // prints "pong"
+      Object.keys(arg).forEach(ele => {
+        const key = ele;
+        switch (key) {
+          case "orderId":
+            //带了orderId时，需要调用支付接口
+            this.payOrder(arg[key]);
+            break;
+          default:
+        }
+      });
     });
   },
-  beforeDestroy() {
-    // this.httpServer.end();
-  }
+  beforeDestroy() {}
 });
 </script>
  <style lang="scss">
@@ -480,8 +464,6 @@ main > div {
   transition: all 0.15s ease;
   box-sizing: border-box;
   border: 1px solid #4fc08d;
-  /* @include mdc-button-ink-color(teal); */
-  /* @include mdc-states(teal); */
 }
 
 .doc button.alt {
