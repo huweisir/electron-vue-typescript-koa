@@ -153,12 +153,20 @@ export default Vue.extend({
     },
     //页面输出log
     addLog(_log) {
-      this.log += `
-      ${_log}`;
+      this.log += `${_log}`;
+    },
+    //获取支付页面URL
+    async getPayUrl(orderid_to_epay) {
+      let url = orderid_to_epay
+        ? await this.get_order_pay_info(orderid_to_epay)
+        : null;
+      if (url) {
+        this.onpay = true;
+        this.gotoPay(url);
+      }
     },
     // iframe页面跳转
     gotoPay(url) {
-      console.log("gotopay===>", url);
       this.href2 = url;
     },
     //计时抢票
@@ -166,48 +174,34 @@ export default Vue.extend({
       const fair_show_end_time = equip.fair_show_end_time || 0;
       const onlineStartTime = Date.parse(fair_show_end_time);
       this.startTime = onlineStartTime;
-      // const nowTime = await this.getStandardTime();
       const nowTime = Date.now();
-      // debugger;
+      // 订单到支付的ID
       let orderid_to_epay = "";
-      if (onlineStartTime - +this.advanceTime > +nowTime) {
-        // 没到抢票时间
-        const parse = onlineStartTime - nowTime;
-        let times = 0;
-        var timer1 = setTimeout(() => {
-          var timer2 = setInterval(async () => {
+      const parse = onlineStartTime - nowTime;
+      if (parse - ~~this.advanceTime > 0) {
+        // 没到抢票次数，计时器
+        let account = 0;
+        var timerSetTime = setTimeout(() => {
+          var timeSetInterval = setInterval(async () => {
             // 提交订单
             orderid_to_epay = await this.addOrder(equip, () => {
               //成功结束或者失败
-              clearInterval(timer2);
+              clearInterval(timeSetInterval);
             });
-            let url = orderid_to_epay
-              ? await this.get_order_pay_info(orderid_to_epay)
-              : null;
-            if (url) {
-              this.onpay = true;
-              this.gotoPay(url);
-            }
-            if (this.frequency * times - this.advanceTime > 5000) {
+            //获取支付页面URL
+            this.getPayUrl(orderid_to_epay);
+            if (this.frequency * account - this.advanceTime > 5000) {
               //超时5秒自动结束
-              clearInterval(timer2);
+              clearInterval(timeSetInterval);
             }
-            // this.
+            account++;
           }, this.frequency);
-          clearTimeout(timer1);
+          clearTimeout(timerSetTime);
         }, parse - this.advanceTime);
       } else {
-        orderid_to_epay = await this.addOrder(equip, () => {
-          //成功结束或者失败
-        });
-        // debugger;
-        let url = orderid_to_epay
-          ? await this.get_order_pay_info(orderid_to_epay)
-          : null;
-        if (url) {
-          this.onpay = true;
-          this.gotoPay(url);
-        }
+        orderid_to_epay = await this.addOrder(equip, () => {});
+        //获取支付页面URL
+        this.getPayUrl(orderid_to_epay);
       }
     },
     open(link) {
@@ -283,7 +277,7 @@ export default Vue.extend({
       } else {
         orderid_to_epay = data.order.orderid_to_epay;
       }
-      this.addLog("下单：addOrder ===> 结果：" + log);
+      this.addLog("下单：addOrder ===> 结果：" + log + " " + new Date());
       if (data.code == 200) {
         if (callback) callback();
       }
