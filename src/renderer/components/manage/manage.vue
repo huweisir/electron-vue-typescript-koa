@@ -79,9 +79,6 @@ import Vue from "vue";
 import http from "http";
 import httpProxy from "http-proxy";
 import { scriptGetTicket, scriptPay } from "./script";
-import { setTimeout, clearTimeout, setInterval, clearInterval } from "timers";
-import { debug } from "util";
-
 const { ipcRenderer } = require("electron");
 const MD5 = require("../../../lib/md5.js");
 
@@ -172,36 +169,40 @@ export default Vue.extend({
     //计时抢票
     async getTicket(equip) {
       const fair_show_end_time = equip.fair_show_end_time || 0;
-      const onlineStartTime = Date.parse(fair_show_end_time);
+      let onlineStartTime = Date.parse(fair_show_end_time);
       this.startTime = onlineStartTime;
       const nowTime = Date.now();
       // 订单到支付的ID
       let orderid_to_epay = "";
       const parse = onlineStartTime - nowTime;
       if (parse - ~~this.advanceTime > 0) {
-        // 没到抢票次数，计时器
         let account = 0;
+        //开始时间，单位ms
+        let startTime = parse - this.advanceTime;
+        // 定时器
         var timerSetTime = setTimeout(() => {
           var timeSetInterval = setInterval(async () => {
             // 提交订单
-            orderid_to_epay = await this.addOrder(equip, () => {
+            await this.addOrder(equip, orderid_to_epay => {
               //成功结束或者失败
               clearInterval(timeSetInterval);
+              this.getPayUrl(orderid_to_epay);
             });
             //获取支付页面URL
-            this.getPayUrl(orderid_to_epay);
             if (this.frequency * account - this.advanceTime > 5000) {
               //超时5秒自动结束
               clearInterval(timeSetInterval);
             }
+            // 抢票次数，计数器
             account++;
           }, this.frequency);
           clearTimeout(timerSetTime);
-        }, parse - this.advanceTime);
+        }, startTime);
       } else {
-        orderid_to_epay = await this.addOrder(equip, () => {});
+        await this.addOrder(equip, orderid_to_epay => {
+          this.getPayUrl(orderid_to_epay);
+        });
         //获取支付页面URL
-        this.getPayUrl(orderid_to_epay);
       }
     },
     open(link) {
@@ -220,7 +221,6 @@ export default Vue.extend({
           : Date.now();
       }
       return nowTime;
-      console.log(res);
     },
     //获取商品详情接口
     async get_equip_detail() {
@@ -278,8 +278,8 @@ export default Vue.extend({
         orderid_to_epay = data.order.orderid_to_epay;
       }
       this.addLog("下单：addOrder ===> 结果：" + log + " " + new Date());
-      if (data.code == 200) {
-        if (callback) callback();
+      if (callback && data.code == 200 && orderid_to_epay) {
+        if (callback) callback(orderid_to_epay || "");
       }
       return orderid_to_epay;
     },
@@ -302,7 +302,6 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
-      // debugger;
       let data = res.data || {};
       // 拿到支付URL
       let url =
@@ -431,9 +430,8 @@ export default Vue.extend({
         switch (key) {
           case "orderId":
             //带了orderId时，需要调用支付接口
-            console.log(MD5(this.password));
-            // debugger;
             if (this.validatePhoneCode) {
+              //如果是验证手机号流程，展示不作处理
             } else {
               this.payOrder(arg[key]);
             }
