@@ -124,7 +124,6 @@ export default Vue.extend({
       return start.replace(/\T|Z/g, "  ");
     },
     startTimeC() {
-      // debugger;
       var start = new Date(this.startTime) + "";
       return start.replace(/\T|Z/g, "  ");
     }
@@ -157,6 +156,7 @@ export default Vue.extend({
       let url = orderid_to_epay
         ? await this.get_order_pay_info(orderid_to_epay)
         : null;
+      console.log(url);
       if (url) {
         this.onpay = true;
         this.gotoPay(url);
@@ -200,6 +200,7 @@ export default Vue.extend({
         }, startTime);
       } else {
         await this.addOrder(equip, orderid_to_epay => {
+          console.log("addOrder====> orderid_to_epay", orderid_to_epay);
           this.getPayUrl(orderid_to_epay);
         });
         //获取支付页面URL
@@ -278,7 +279,7 @@ export default Vue.extend({
         orderid_to_epay = data.order.orderid_to_epay;
       }
       this.addLog("下单：addOrder ===> 结果：" + log + " " + new Date());
-      if (callback && data.code == 200 && orderid_to_epay) {
+      if (callback && res.status == 200 && orderid_to_epay) {
         if (callback) callback(orderid_to_epay || "");
       }
       return orderid_to_epay;
