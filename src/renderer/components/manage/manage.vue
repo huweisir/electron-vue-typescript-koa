@@ -110,7 +110,9 @@ export default Vue.extend({
       //频率默认100ms
       frequency: 10,
       // 提前多少时间开始刷接口
-      advanceTime: 1000
+      advanceTime: 1000,
+      // 易盾token
+      yidunToken: ""
     };
   },
   computed: {
@@ -132,6 +134,20 @@ export default Vue.extend({
   methods: {
     inputFunc(e, key) {
       localStorage[key] = e.target.value;
+    },
+    initWatchman() {
+      try {
+        window.initWatchman({
+          productNumber: "YD00000595128763", // 产品编号
+          onload: function(instance) {
+            this.antiSpam = instance;
+            window.antiSpam = instance;
+          },
+          onerror: function(e) {}
+        });
+      } catch (err) {
+        console.warn(err);
+      }
     },
     reset() {
       this.validatePhoneCode = false;
@@ -334,6 +350,52 @@ export default Vue.extend({
       };
       this.param = param;
     },
+    // 支付接口
+    async ajaxPay(orderId) {
+      const time = Date.now();
+      let yidunToken = "";
+      var params = {
+        // 头部的一些信息
+        accept: "*/*",
+        "accept-encoding": "gzip, deflate, br",
+        "content-length": 149,
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        Referer: `https://epay.163.com/cashier/m/standardCashier?orderId=${orderId}`, //referer
+        Host: "my.cbg.163.com",
+        Origin: "https://epay.163.com"
+      };
+      let data = await this.$http({
+        url: "/ajaxPay",
+        method: "POST", // 默认是 get
+        baseURL: "https://epay.163.com/cashier/m/security/",
+        transformRequest: [
+          // form data提交数据时的一种处理，防止405
+          function(data) {
+            let ret = "";
+            for (let it in data) {
+              ret +=
+                encodeURIComponent(it) +
+                "=" +
+                encodeURIComponent(data[it]) +
+                "&";
+            }
+            return ret;
+          }
+        ],
+        headers: {
+          my_info: JSON.stringify(params)
+        },
+        // 这边需要一个时间搓
+        params: { v: time },
+        // 这里是form data表单数据
+        data: {
+          proposal: JSON.stringify({ orderId, balance: { payAmount: 4555 } }),
+          securityValid: JSON.stringify({}),
+          envData: JSON.stringify({ term: "wap" }),
+          yidunToken
+        }
+      });
+    },
     // 付款接口
     async payOrder(orderId) {
       const time = Date.now();
@@ -434,7 +496,15 @@ export default Vue.extend({
             if (this.validatePhoneCode) {
               //如果是验证手机号流程，展示不作处理
             } else {
-              this.payOrder(arg[key]);
+              // 易盾token防作弊
+              this.antiSpam.getToken(
+                "1e334e244f2b46aa9acf4f707686cc23",
+                async token => {
+                  this.yidunToken = token;
+                  await this.payOrder(arg[key]);
+                  await this.ajaxPay(arg[key]);
+                }
+              );
             }
             break;
           default:
