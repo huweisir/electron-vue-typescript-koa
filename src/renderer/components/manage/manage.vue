@@ -112,7 +112,8 @@ export default Vue.extend({
       // 提前多少时间开始刷接口
       advanceTime: 1000,
       // 易盾token
-      yidunToken: ""
+      yidunToken: "",
+      antiSpam: null
     };
   },
   computed: {
@@ -136,18 +137,14 @@ export default Vue.extend({
       localStorage[key] = e.target.value;
     },
     initWatchman() {
-      try {
-        window.initWatchman({
-          productNumber: "YD00000595128763", // 产品编号
-          onload: function(instance) {
-            this.antiSpam = instance;
-            window.antiSpam = instance;
-          },
-          onerror: function(e) {}
-        });
-      } catch (err) {
-        console.warn(err);
-      }
+      window.initWatchman({
+        productNumber: "YD00000595128763", // 产品编号
+        onload: instance => {
+          this.antiSpam = instance;
+          window.antiSpam = instance;
+        },
+        onerror: function(e) {}
+      });
     },
     reset() {
       this.validatePhoneCode = false;
@@ -165,7 +162,9 @@ export default Vue.extend({
     },
     //页面输出log
     addLog(_log) {
-      this.log += `${_log}`;
+      this.log += `${_log}
+      
+      `;
     },
     //获取支付页面URL
     async getPayUrl(orderid_to_epay) {
@@ -205,7 +204,7 @@ export default Vue.extend({
               this.getPayUrl(orderid_to_epay);
             });
             //获取支付页面URL
-            if (this.frequency * account - this.advanceTime > 5000) {
+            if (this.frequency * account - this.advanceTime > 1500) {
               //超时5秒自动结束
               clearInterval(timeSetInterval);
             }
@@ -216,7 +215,8 @@ export default Vue.extend({
         }, startTime);
       } else {
         await this.addOrder(equip, orderid_to_epay => {
-          console.log("addOrder====> orderid_to_epay", orderid_to_epay);
+          debugger;
+          //成功结束或者失败
           this.getPayUrl(orderid_to_epay);
         });
         //获取支付页面URL
@@ -285,17 +285,17 @@ export default Vue.extend({
           view_loc: "all_list"
         }
       });
-      let data = res.data || {};
+      let resData = res.data || {};
       let log = "下单成功";
       let back;
       let orderid_to_epay;
-      if (data.msg) {
-        log = data.msg;
+      if (resData.msg) {
+        log = resData.msg;
       } else {
-        orderid_to_epay = data.order.orderid_to_epay;
+        orderid_to_epay = resData.order.orderid_to_epay;
       }
       this.addLog("下单：addOrder ===> 结果：" + log + " " + new Date());
-      if (callback && res.status == 200 && orderid_to_epay) {
+      if (callback && resData.status == 1 && orderid_to_epay) {
         if (callback) callback(orderid_to_epay || "");
       }
       return orderid_to_epay;
@@ -351,9 +351,8 @@ export default Vue.extend({
       this.param = param;
     },
     // 支付接口
-    async ajaxPay(orderId) {
+    async ajaxPay(orderId, yidunToken) {
       const time = Date.now();
-      let yidunToken = "";
       var params = {
         // 头部的一些信息
         accept: "*/*",
@@ -364,10 +363,10 @@ export default Vue.extend({
         Host: "my.cbg.163.com",
         Origin: "https://epay.163.com"
       };
-      let data = await this.$http({
+      return await this.$http({
         url: "/ajaxPay",
         method: "POST", // 默认是 get
-        baseURL: "https://epay.163.com/cashier/m/security/",
+        baseURL: "https://epay.163.com/cashier/m/",
         transformRequest: [
           // form data提交数据时的一种处理，防止405
           function(data) {
@@ -409,7 +408,7 @@ export default Vue.extend({
         Host: "my.cbg.163.com",
         Origin: "https://epay.163.com"
       };
-      let data = await this.$http({
+      return await this.$http({
         url: "/verifyPayItems",
         method: "POST", // 默认是 get
         baseURL: "https://epay.163.com/cashier/m/security/",
@@ -484,6 +483,7 @@ export default Vue.extend({
   },
   created() {
     this.getStandardTime();
+    this.initWatchman();
     //初始化本地数据
     this.initLocal();
     ipcRenderer.on("asynchronous-reply", (event, arg) => {
@@ -501,8 +501,14 @@ export default Vue.extend({
                 "1e334e244f2b46aa9acf4f707686cc23",
                 async token => {
                   this.yidunToken = token;
-                  await this.payOrder(arg[key]);
-                  await this.ajaxPay(arg[key]);
+                  let res = await this.payOrder(arg[key]);
+                  let resData = res.data || {};
+                  this.addLog(
+                    "支付：verifyPayItems ===> 结果：" + resData.result
+                  );
+                  res = await this.ajaxPay(arg[key], token);
+                  resData = res.data || {};
+                  this.addLog("支付：ajaxPay ===> 结果：" + resData.result);
                 }
               );
             }
