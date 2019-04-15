@@ -9,6 +9,7 @@
   <script>
     require('module').globalPaths.push("<%= htmlWebpackPlugin.options.nodeModules.replace(/\\/g, '\\\\') %>")
     // const enav = new (require('electron-navigation'))();
+    var mixpanel = require('mixpanel-browser');
   </script>
   <% } %>
 </head>
@@ -21,7 +22,10 @@
     if (process.env.NODE_ENV !== 'development') window.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
   </script>
   <% } %>
-  <script src="https://acstatic-dun.126.net/tool.min.js"></script>
+  <script type="text/javascript" src="http://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js"></script>
+  <script type="text/javascript" src="https://hubble-js-bucket.nosdn.127.net/DATracker.globals.1.2.2.js"></script>
+  <!-- 网易易盾防作弊文件 ，会自动启请求https://acstatic-dun.126.net/watchman.min.js  -->
+  <script type="text/javascript" src="https://acstatic-dun.126.net/tool.min.js"></script>
   <!-- webpack builds are automatically injected -->
 </body>
 

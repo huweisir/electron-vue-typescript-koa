@@ -111,6 +111,7 @@ export default Vue.extend({
       frequency: 10,
       // 提前多少时间开始刷接口
       advanceTime: 1000,
+      payAmount: 0,
       // 易盾token
       yidunToken: "",
       antiSpam: null
@@ -215,7 +216,6 @@ export default Vue.extend({
         }, startTime);
       } else {
         await this.addOrder(equip, orderid_to_epay => {
-          debugger;
           //成功结束或者失败
           this.getPayUrl(orderid_to_epay);
         });
@@ -350,6 +350,57 @@ export default Vue.extend({
       };
       this.param = param;
     },
+    // 选择支付方式
+    async ajaxCoupons(orderId) {
+      const data = {
+        orderId,
+        envData: JSON.stringify({ term: "wap" }),
+        payMode: JSON.stringify({
+          balanceAvailable: true,
+          couponAvailable: true,
+          quickPayAvailable: true,
+          ebankAvailable: true
+        }),
+        proposal: JSON.stringify({ balance: { payAmount: this.payAmount } })
+      };
+      const time = Date.now();
+      const params = {
+        // 头部的一些信息
+        accept: "*/*",
+        "accept-encoding": "gzip, deflate, br",
+        "content-length": 149,
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        Referer: `https://epay.163.com/cashier/m/standardCashier?orderId=${orderId}`, //referer
+        Host: "my.cbg.163.com",
+        Origin: "https://epay.163.com"
+      };
+      return await this.$http({
+        url: "/ajaxCoupons",
+        method: "POST", // 默认是 get
+        baseURL: "https://epay.163.com/cashier/m/",
+        transformRequest: [
+          // form data提交数据时的一种处理，防止405
+          function(data) {
+            let ret = "";
+            for (let it in data) {
+              ret +=
+                encodeURIComponent(it) +
+                "=" +
+                encodeURIComponent(data[it]) +
+                "&";
+            }
+            return ret;
+          }
+        ],
+        headers: {
+          my_info: JSON.stringify(params)
+        },
+        // 这边需要一个时间搓
+        params: { v: time },
+        // 这里是form data表单数据
+        data
+      });
+    },
     // 支付接口
     async ajaxPay(orderId, yidunToken) {
       const time = Date.now();
@@ -456,6 +507,15 @@ export default Vue.extend({
         this.getParams();
         // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
         let equip = await this.get_equip_detail();
+        this.payAmount = equip.price / 100;
+        var hubble = new window.HubbleUtil("pay", "payInfo");
+        hubble("payMethodClick", {
+          pagetitle: ` 余额（<span id="balanceAmount">${
+            this.payAmount
+          }</span>元） `,
+          ordid: orderId,
+          pfid: "2011101910PT16084831"
+        });
         // 下单
         let orderid_to_epay = equip ? await this.getTicket(equip) : null;
         var timer2 = setInterval(() => {
@@ -506,9 +566,14 @@ export default Vue.extend({
                   this.addLog(
                     "支付：verifyPayItems ===> 结果：" + resData.result
                   );
+                  await this.ajaxCoupons(arg[key]);
                   res = await this.ajaxPay(arg[key], token);
                   resData = res.data || {};
-                  this.addLog("支付：ajaxPay ===> 结果：" + resData.result);
+                  resData.errorMsg
+                    ? this.addLog(
+                        "支付：ajaxPay ===> 结果：" + resData.errorMsg
+                      )
+                    : this.addLog("支付：ajaxPay ===> 结果：" + resData.result);
                 }
               );
             }
