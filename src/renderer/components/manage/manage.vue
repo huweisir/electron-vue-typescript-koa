@@ -449,7 +449,7 @@ export default Vue.extend({
       });
     },
     // 支付接口
-    async ajaxPay(orderId, yidunToken) {
+    async ajaxPay(orderId, payAmount, yidunToken) {
       const time = Date.now();
       var params = {
         // 头部的一些信息
@@ -486,14 +486,13 @@ export default Vue.extend({
         params: { v: time },
         // 这里是form data表单数据
         data: {
-          proposal: JSON.stringify({ orderId, balance: { payAmount: 4555 } }),
+          proposal: JSON.stringify({ orderId, balance: { payAmount } }),
           securityValid: JSON.stringify({}),
           envData: JSON.stringify({ term: "wap" }),
           yidunToken
         }
       });
     },
-
     // 付款接口
     async payOrder(orderId) {
       const time = Date.now();
@@ -631,7 +630,7 @@ export default Vue.extend({
                     "支付：verifyPayItems ===> 结果：" + resData.result
                   );
                   await this.ajaxCoupons(orderId);
-                  res = await this.ajaxPay(orderId, token);
+                  res = await this.ajaxPay(orderId, this.payAmount, token);
                   resData = res.data || {};
                   resData.errorMsg
                     ? this.addLog(
