@@ -12,6 +12,8 @@
       ></iframe>
       <div class="right-side">
         <div class="doc">
+          <div>{{"VISION : "+new Date()}}</div>
+          <br>
           <div class="title">Started</div>
           <div>
             <label for>开始时间：</label>
@@ -114,7 +116,9 @@ export default Vue.extend({
       payAmount: 0,
       // 易盾token
       yidunToken: "",
-      antiSpam: null
+      antiSpam: null,
+      orderTime: 0,
+      payTime: 0
     };
   },
   computed: {
@@ -293,6 +297,8 @@ export default Vue.extend({
         log = resData.msg;
       } else {
         orderid_to_epay = resData.order.orderid_to_epay;
+        this.orderTime = Date.now();
+        this.addLog("下单时间(时间搓) === > " + this.orderTime);
       }
       this.addLog("下单：addOrder ===> 结果：" + log + " " + new Date());
       if (callback && resData.status == 1 && orderid_to_epay) {
@@ -632,6 +638,11 @@ export default Vue.extend({
                   await this.ajaxCoupons(orderId);
                   res = await this.ajaxPay(orderId, this.payAmount, token);
                   resData = res.data || {};
+                  this.payTime = Date.now();
+                  this.addLog("付款时间(时间搓) === > " + this.payTime);
+                  debugger;
+                  var cha = parseInt(this.payTime) - parseInt(this.orderTime);
+                  this.addLog("下单-付款 时间差 === > " + cha + ms);
                   resData.errorMsg
                     ? this.addLog(
                         "支付：ajaxPay ===> 结果：" + resData.errorMsg
