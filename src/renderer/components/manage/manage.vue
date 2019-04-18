@@ -300,11 +300,58 @@ export default Vue.extend({
       }
       return orderid_to_epay;
     },
+    async my_orders() {
+      let res = await this.$http({
+        url: "/my_orders?page=1&status=1",
+        method: "get", // 默认是 get
+        baseURL: "https://my.cbg.163.com/cgi/api/",
+        headers: {
+          "cbg-safe-code": this.CBG_CONFIG.safeCode,
+          my_info: JSON.stringify({
+            Referer: this.ifmsrc, //referer
+            Host: "my.cbg.163.com",
+            Origin: "https://my.cbg.163.com"
+          })
+        }
+      });
+      let resData = res.data || {};
+      let order = resData.result[0] || {};
+      let serverid = order.serverid;
+      let orderid = order.orderid;
+      return `${serverid}_${orderid}`;
+    },
+    // 获取订单详情接口
+    async cancel_order(orderid_to_epay) {
+      let res = await this.$http({
+        url: "/cancel_order",
+        method: "POST", // 默认是 get
+        baseURL: "https://my.cbg.163.com/cgi/api/",
+        headers: {
+          "cbg-safe-code": this.CBG_CONFIG.safeCode,
+          my_info: JSON.stringify({
+            Referer: this.ifmsrc, //referer
+            Host: "my.cbg.163.com",
+            Origin: "https://my.cbg.163.com"
+          })
+        },
+        params: {
+          orderid_to_epay
+        }
+      });
+      let resData = res.data || {};
+      // 取消成功
+      let result = false;
+      if (resData.status === 1) {
+        result = true;
+      }
+      this.addLog("取消订单：cancel_order ===> 结果：" + resData.msg);
+      return result;
+    },
     // 获取订单详情接口
     async get_order_pay_info(orderid_to_epay) {
       let res = await this.$http({
         url: "/get_order_pay_info",
-        method: "POST", // 默认是 get
+        method: "get", // 默认是 get
         baseURL: "https://my.cbg.163.com/cgi/api/",
         headers: {
           "cbg-safe-code": this.CBG_CONFIG.safeCode,
@@ -446,6 +493,7 @@ export default Vue.extend({
         }
       });
     },
+
     // 付款接口
     async payOrder(orderId) {
       const time = Date.now();
@@ -505,19 +553,14 @@ export default Vue.extend({
       if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.getParams();
+        let orderid_to_epay = await this.my_orders();
+        await this.cancel_order(orderid_to_epay);
         // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
         let equip = await this.get_equip_detail();
-        this.payAmount = equip.price / 100;
-        var hubble = new window.HubbleUtil("pay", "payInfo");
-        hubble("payMethodClick", {
-          pagetitle: ` 余额（<span id="balanceAmount">${
-            this.payAmount
-          }</span>元） `,
-          ordid: orderId,
-          pfid: "2011101910PT16084831"
-        });
+        this.payAmount = equip ? equip.price / 100 : 0;
+
         // 下单
-        let orderid_to_epay = equip ? await this.getTicket(equip) : null;
+        orderid_to_epay = equip ? await this.getTicket(equip) : null;
         var timer2 = setInterval(() => {
           if (this.CBG_CONFIG.safeCode) {
             // 如果安全码已存在，定时器结束
@@ -542,6 +585,15 @@ export default Vue.extend({
     }
   },
   created() {
+    var hubble = window.hubble || new window.HubbleUtil("pay", "payInfo");
+    window.hubble = hubble;
+    this.hubbleFun = function(eventId, ordid, pfid) {
+      let other = {
+        ordid,
+        pfid
+      };
+      hubble.report(eventId, other);
+    };
     this.getStandardTime();
     this.initWatchman();
     //初始化本地数据
@@ -553,6 +605,7 @@ export default Vue.extend({
         switch (key) {
           case "orderId":
             //带了orderId时，需要调用支付接口
+            let orderId = arg[key];
             if (this.validatePhoneCode) {
               //如果是验证手机号流程，展示不作处理
             } else {
@@ -561,13 +614,24 @@ export default Vue.extend({
                 "1e334e244f2b46aa9acf4f707686cc23",
                 async token => {
                   this.yidunToken = token;
-                  let res = await this.payOrder(arg[key]);
+                  this.hubbleFun("enter", {
+                    ordid: orderId,
+                    pfid: "2011101910PT16084831"
+                  });
+                  this.hubbleFun("payMethodClick", {
+                    pagetitle: ` 余额（<span id="balanceAmount">${
+                      this.payAmount
+                    }</span>元） `,
+                    ordid: orderId,
+                    pfid: "2011101910PT16084831"
+                  });
+                  let res = await this.payOrder(orderId);
                   let resData = res.data || {};
                   this.addLog(
                     "支付：verifyPayItems ===> 结果：" + resData.result
                   );
-                  await this.ajaxCoupons(arg[key]);
-                  res = await this.ajaxPay(arg[key], token);
+                  await this.ajaxCoupons(orderId);
+                  res = await this.ajaxPay(orderId, token);
                   resData = res.data || {};
                   resData.errorMsg
                     ? this.addLog(

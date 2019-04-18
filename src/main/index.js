@@ -1,6 +1,11 @@
-import { app, BrowserWindow, net, Menu, session, ipcMain } from 'electron';
-
-
+import {
+  app,
+  BrowserWindow,
+  net,
+  Menu,
+  session,
+  ipcMain
+} from 'electron';
 /**
  * Set `__static` path to static files in production
  * https://simulatedgreg.gitbooks.io/electron-vue/content/en/using-static-assets.html
@@ -11,9 +16,9 @@ if (process.env.NODE_ENV !== 'development') {
 
 
 let mainWindow;
-const winURL = process.env.NODE_ENV === 'development'
-  ? `http://localhost:9090`
-  : `file://${__dirname}/index.html`
+const winURL = process.env.NODE_ENV === 'development' ?
+  `http://localhost:9090` :
+  `file://${__dirname}/index.html`
 
 // const template = [
 //   {
@@ -112,7 +117,9 @@ function createWindow() {
     if (details.url && details.url.indexOf("epay.163.com/cashier/m/standardCashier") > -1) {
       var orderIdstr = details.url.split("?")[1];
       var orderId = orderIdstr.split("=")[1];
-      webC.send('asynchronous-reply', { orderId });
+      webC.send('asynchronous-reply', {
+        orderId
+      });
       console.log("onBeforeRequest ===> ", details.url)
     }
     callback(details)
@@ -130,7 +137,10 @@ function createWindow() {
       }
       delete headers['my_info'];
     }
-    callback({ cancel: false, requestHeaders: headers });
+    callback({
+      cancel: false,
+      requestHeaders: headers
+    });
   });
 
   mainWindow = new BrowserWindow({
@@ -138,7 +148,9 @@ function createWindow() {
     useContentSize: true,
     width: 1000,
     webSecurity: false,
-    webPreferences: { webSecurity: false },
+    webPreferences: {
+      webSecurity: false
+    },
   })
 
   mainWindow.loadURL(winURL);
@@ -163,4 +175,3 @@ app.on('activate', () => {
     createWindow();
   }
 });
-
