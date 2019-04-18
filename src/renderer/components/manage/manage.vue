@@ -642,7 +642,7 @@ export default Vue.extend({
                   this.addLog("付款时间(时间搓) === > " + this.payTime);
                   debugger;
                   var cha = parseInt(this.payTime) - parseInt(this.orderTime);
-                  this.addLog("下单-付款 时间差 === > " + cha + ms);
+                  this.addLog("下单-付款 时间差 === > " + cha + "ms");
                   resData.errorMsg
                     ? this.addLog(
                         "支付：ajaxPay ===> 结果：" + resData.errorMsg
