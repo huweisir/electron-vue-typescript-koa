@@ -12,7 +12,7 @@
       ></iframe>
       <div class="right-side">
         <div class="doc">
-          <div>{{"VISION : "+new Date()}}</div>
+          <div>{{"VISION : 1.0.0"}}</div>
           <br>
           <div class="title">Started</div>
           <div>
