@@ -603,15 +603,15 @@ export default Vue.extend({
     }
   },
   created() {
-    var hubble = window.hubble || new window.HubbleUtil("pay", "payInfo");
-    window.hubble = hubble;
-    this.hubbleFun = function(eventId, ordid, pfid) {
-      let other = {
-        ordid,
-        pfid
-      };
-      hubble.report(eventId, other);
-    };
+    // var hubble = window.hubble || new window.HubbleUtil("pay", "payInfo");
+    // window.hubble = hubble;
+    // this.hubbleFun = function(eventId, ordid, pfid) {
+    //   let other = {
+    //     ordid,
+    //     pfid
+    //   };
+    //   hubble.report(eventId, other);
+    // };
     this.getStandardTime();
     this.initWatchman();
     //初始化本地数据
@@ -632,17 +632,17 @@ export default Vue.extend({
                 "1e334e244f2b46aa9acf4f707686cc23",
                 async token => {
                   this.yidunToken = token;
-                  this.hubbleFun("enter", {
-                    ordid: orderId,
-                    pfid: "2011101910PT16084831"
-                  });
-                  this.hubbleFun("payMethodClick", {
-                    pagetitle: ` 余额（<span id="balanceAmount">${
-                      this.payAmount
-                    }</span>元） `,
-                    ordid: orderId,
-                    pfid: "2011101910PT16084831"
-                  });
+                  // this.hubbleFun("enter", {
+                  //   ordid: orderId,
+                  //   pfid: "2011101910PT16084831"
+                  // });
+                  // this.hubbleFun("payMethodClick", {
+                  //   pagetitle: ` 余额（<span id="balanceAmount">${
+                  //     this.payAmount
+                  //   }</span>元） `,
+                  //   ordid: orderId,
+                  //   pfid: "2011101910PT16084831"
+                  // });
                   let res = await this.payOrder(orderId);
                   let resData = res.data || {};
                   this.addLog(
@@ -653,7 +653,6 @@ export default Vue.extend({
                   resData = res.data || {};
                   this.payTime = Date.now();
                   this.addLog("付款时间(时间搓) === > " + this.payTime);
-                  debugger;
                   var cha = parseInt(this.payTime) - parseInt(this.orderTime);
                   this.addLog("下单-付款 时间差 === > " + cha + "ms");
                   resData.errorMsg
