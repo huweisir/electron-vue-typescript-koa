@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <title>electron-vue</title>
   <% if (htmlWebpackPlugin.options.nodeModules) { %>
+  <!-- 这部分暂时不需要，后面如果有 -->
   <!-- <script type="text/javascript" src="https://i.epay.126.net/a/eyq/wap/20160216/js/public/sea.js?201904161425"></script> -->
   <!-- <script type="text/javascript" src="https://nos.netease.com/apmsdk/napm-web-min-1.1.5.js"></script> -->
   <!-- <script type="text/javascript" src="https://i.epay.126.net/a/eyq/payment/20151121/js/module/sha256.js"></script> -->
@@ -29,6 +30,7 @@
       /\\/g, '\\\\')
   </script>
   <% } %>
+  <!-- 主要用于初始化watchman -->
   <script type="text/javascript" src="https://acstatic-dun.126.net/tool.min.js"></script>
   <!-- webpack builds are automatically injected -->
 </body>

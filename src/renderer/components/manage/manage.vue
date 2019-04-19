@@ -68,7 +68,7 @@
           </div>
           <br>
           <h3 style="color:red;">日志:</h3>
-          <div class="log">{{log}}</div>
+          <div class="log" v-html="log"></div>
         </div>
       </div>
     </main>
@@ -84,11 +84,17 @@
 import SystemInformation from "../LandingPage/SystemInformation";
 import Vue from "vue";
 import http from "http";
+import { ajaxPay, payOrder, ajaxCoupons } from "./ajax/payAjax.ts";
 import httpProxy from "http-proxy";
-import { scriptGetTicket, scriptPay } from "./script";
+import {
+  get_order_pay_info,
+  get_equip_detail,
+  add_order,
+  cancel_order
+} from "./ajax/order.ts";
+import { formatTime } from "../../common/toolFunction.ts";
 import { lastDate } from "../../config/config";
 const { ipcRenderer } = require("electron");
-const MD5 = require("../../../lib/md5.js");
 
 export default Vue.extend({
   name: "LandingPage",
@@ -100,8 +106,6 @@ export default Vue.extend({
       CBG_CONFIG: {},
       // 是否是验证手机号
       validatePhoneCode: false,
-      // 账号信息
-      accountData: {},
       // 开始时间
       startTime: 0,
       // 抢票链接
@@ -119,15 +123,17 @@ export default Vue.extend({
       // 密码
       password: "",
       //频率默认100ms
-      frequency: 10,
+      frequency: 50,
       // 提前多少时间开始刷接口
-      advanceTime: 1000,
+      advanceTime: 200,
       payAmount: 0,
       // 易盾token
       yidunToken: "",
       antiSpam: null,
       orderTime: 0,
       payTime: 0
+      // ajaxPay,
+      // payOrder
     };
   },
   computed: {
@@ -137,12 +143,12 @@ export default Vue.extend({
       return src;
     },
     startTimeS() {
-      var start = new Date(this.startTime - this.advanceTime) + "";
-      return start.replace(/\T|Z/g, "  ");
+      var start = new Date(this.startTime - this.advanceTime);
+      return this.formatTime(start);
     },
     startTimeC() {
-      var start = new Date(this.startTime) + "";
-      return start.replace(/\T|Z/g, "  ");
+      var start = new Date(this.startTime);
+      return this.formatTime(start);
     },
     // 是否过期
     Expired() {
@@ -151,9 +157,26 @@ export default Vue.extend({
   },
   components: { SystemInformation },
   methods: {
+    // 获取订单需要支付的信息，如支付页面
+    get_order_pay_info,
+    get_equip_detail,
+    add_order,
+    cancel_order,
+    /***********          *************/
+    //
+    /***********  支付ajax *************/
+    ajaxPay,
+    payOrder,
+    ajaxCoupons,
+    /***********          *************/
+    /***********  支付ajax *************/
+    //
+    // 时间格式化
+    formatTime,
     inputFunc(e, key) {
       localStorage[key] = e.target.value;
     },
+    // 初始化watchman
     initWatchman() {
       window.initWatchman({
         productNumber: "YD00000595128763", // 产品编号
@@ -186,12 +209,17 @@ export default Vue.extend({
     },
     //获取支付页面URL
     async getPayUrl(orderid_to_epay) {
+      // 获取订单需要支付的信息，如支付页面
       let url = orderid_to_epay
-        ? await this.get_order_pay_info(orderid_to_epay)
+        ? await this.get_order_pay_info(
+            orderid_to_epay,
+            this.ifmsrc,
+            this.CBG_CONFIG.safeCode
+          )
         : null;
-      console.log(url);
       if (url) {
         this.onpay = true;
+        // 跳转支付页面
         this.gotoPay(url);
       }
     },
@@ -200,7 +228,7 @@ export default Vue.extend({
       this.href2 = url;
     },
     //计时抢票
-    async getTicket(equip) {
+    async getTicket(equip, advanceTime) {
       const fair_show_end_time = equip.fair_show_end_time || 0;
       let onlineStartTime = Date.parse(fair_show_end_time);
       this.startTime = onlineStartTime;
@@ -208,22 +236,30 @@ export default Vue.extend({
       // 订单到支付的ID
       let orderid_to_epay = "";
       const parse = onlineStartTime - nowTime;
-      if (parse - ~~this.advanceTime > 0) {
+      if (parse - ~~advanceTime > 0) {
         let account = 0;
         //开始时间，单位ms
-        let startTime = parse - this.advanceTime;
+        let startTime = parse - advanceTime;
+        // ajax addOrder守卫
+        let addOrderStop = false;
         // 定时器
         var timerSetTime = setTimeout(() => {
           var timeSetInterval = setInterval(async () => {
             // 提交订单
+            if (addOrderStop) {
+              return;
+            }
+            addOrderStop = true;
             await this.addOrder(equip, orderid_to_epay => {
               //成功结束或者失败
               clearInterval(timeSetInterval);
               this.getPayUrl(orderid_to_epay);
             });
-            //获取支付页面URL
-            if (this.frequency * account - this.advanceTime > 1500) {
-              //超时5秒自动结束
+            // ajax 请求结束
+            addOrderStop = false;
+            //获取支付页面URL,
+            if (this.frequency * account - advanceTime > this.frequency * 2) {
+              //超时第三次自动结束
               clearInterval(timeSetInterval);
             }
             // 抢票次数，计数器
@@ -242,66 +278,15 @@ export default Vue.extend({
     open(link) {
       this.$electron.shell.openExternal(link);
     },
-    async getStandardTime() {
-      //校准时间搓，获取当前时间
-      let res = await this.$http.get(
-        "http://api.k780.com:88/?app=life.time&appkey=10003&sign=b59bc3ef6191eb9f747dd4e83c99f2a4&format=json"
-      );
-      let nowTime = Date.now();
-      if (res.data) {
-        // 如果接口返回了时间，则用返回的时间，不然用当前本地时间
-        nowTime = res.data.result
-          ? res.data.result.timestamp || Date.now()
-          : Date.now();
-      }
-      return nowTime;
-    },
-    //获取商品详情接口
-    async get_equip_detail() {
-      let res = await this.$http({
-        url: "/get_equip_detail",
-        method: "POST", // 默认是 get
-        baseURL: "https://my.cbg.163.com/cgi/api/",
-        headers: {
-          "cbg-safe-code": this.CBG_CONFIG.safeCode,
-          cbg_flag: "https://my.cbg.163.com/cgi/api/",
-          x_Referer: this.ifmsrc
-        },
-        params: {
-          serverid: this.param.serverid,
-          ordersn: this.param.ordersn,
-          view_loc: "all_list"
-        }
-      });
-      let back;
-      let resData = res.data || {};
-      if (resData && resData.equip) {
-        this.accountData = resData;
-        back = res.data.equip;
-      }
-      return back;
-    },
     //生成订单
     async addOrder(equip, callback) {
-      let res = await this.$http({
-        url: "/add_order",
-        method: "POST", // 默认是 get
-        baseURL: "https://my.cbg.163.com/cgi/api/",
-        headers: {
-          "cbg-safe-code": this.CBG_CONFIG.safeCode,
-          my_info: JSON.stringify({
-            Referer: this.ifmsrc, //referer
-            Host: "my.cbg.163.com",
-            Origin: "https://my.cbg.163.com"
-          })
-        },
-        params: {
-          serverid: this.param.serverid,
-          confirm_price_total: equip.price,
-          ordersn: this.param.ordersn,
-          view_loc: "all_list"
-        }
-      });
+      let res = await this.add_order(
+        equip,
+        this.param.serverid,
+        this.param.ordersn,
+        this.ifmsrc,
+        this.CBG_CONFIG.safeCode
+      );
       let resData = res.data || {};
       let log = "下单成功";
       let back;
@@ -309,17 +294,24 @@ export default Vue.extend({
       if (resData.msg) {
         log = resData.msg;
       } else {
+        // 如果下单成功了，就返回一个orderid_to_epay
         orderid_to_epay = resData.order.orderid_to_epay;
         this.orderTime = Date.now();
-        this.addLog("下单时间(时间搓) === > " + this.orderTime);
+        this.addLog(
+          `<b><span style="color:red;">下单接口完成</span>(时间搓) === > ${
+            this.orderTime
+          }</b>`
+        );
       }
-      this.addLog("下单：addOrder ===> 结果：" + log + " " + new Date());
+      this.addLog(
+        "下单：addOrder ===> 结果：" + log + " " + this.formatTime(new Date())
+      );
       if (callback && resData.status == 1 && orderid_to_epay) {
         if (callback) callback(orderid_to_epay || "");
       }
       return orderid_to_epay;
     },
-    async my_orders() {
+    async myOrders() {
       let res = await this.$http({
         url: "/my_orders?page=1&status=1",
         method: "get", // 默认是 get
@@ -334,29 +326,33 @@ export default Vue.extend({
         }
       });
       let resData = res.data || {};
-      let order = resData.result[0] || {};
-      let serverid = order.serverid;
-      let orderid = order.orderid;
-      return `${serverid}_${orderid}`;
+      if (resData.msg) {
+        // 错误状态
+        this.addLog("我的订单：my_orders ===> 结果：" + resData.msg);
+        return "";
+      }
+      let order = resData.result[0];
+      if (!order) {
+        // 没有订单
+        this.addLog("我的订单：my_orders ===> 结果：没有订单");
+        return "";
+      }
+      // 状态-代付款
+      let status_desc = order.status_desc;
+      let subtitle = order.subtitle;
+      this.addLog(
+        `我的订单：my_orders ===> 结果：${status_desc} : ${subtitle} `
+      );
+      let orderid_to_epay = order.orderid_to_epay;
+      return orderid_to_epay;
     },
     // 获取订单详情接口
-    async cancel_order(orderid_to_epay) {
-      let res = await this.$http({
-        url: "/cancel_order",
-        method: "POST", // 默认是 get
-        baseURL: "https://my.cbg.163.com/cgi/api/",
-        headers: {
-          "cbg-safe-code": this.CBG_CONFIG.safeCode,
-          my_info: JSON.stringify({
-            Referer: this.ifmsrc, //referer
-            Host: "my.cbg.163.com",
-            Origin: "https://my.cbg.163.com"
-          })
-        },
-        params: {
-          orderid_to_epay
-        }
-      });
+    async cancelOrder(orderid_to_epay) {
+      let res = await this.cancel_order(
+        orderid_to_epay,
+        this.ifmsrc,
+        this.CBG_CONFIG.safeCode
+      );
       let resData = res.data || {};
       // 取消成功
       let result = false;
@@ -365,34 +361,6 @@ export default Vue.extend({
       }
       this.addLog("取消订单：cancel_order ===> 结果：" + resData.msg);
       return result;
-    },
-    // 获取订单详情接口
-    async get_order_pay_info(orderid_to_epay) {
-      let res = await this.$http({
-        url: "/get_order_pay_info",
-        method: "get", // 默认是 get
-        baseURL: "https://my.cbg.163.com/cgi/api/",
-        headers: {
-          "cbg-safe-code": this.CBG_CONFIG.safeCode,
-          my_info: JSON.stringify({
-            Referer: this.ifmsrc, //referer
-            Host: "my.cbg.163.com",
-            Origin: "https://my.cbg.163.com"
-          })
-        },
-        params: {
-          orderid_to_epay,
-          view_loc: "all_list"
-        }
-      });
-      let data = res.data || {};
-      // 拿到支付URL
-      let url =
-        data.pay_info && data.pay_info.epay_pay_url
-          ? data.pay_info.epay_pay_url
-          : "";
-      this.onpay = true;
-      return url;
     },
     // 获取页面信息的接口
     getParams() {
@@ -416,148 +384,6 @@ export default Vue.extend({
       };
       this.param = param;
     },
-    // 选择支付方式
-    async ajaxCoupons(orderId) {
-      const data = {
-        orderId,
-        envData: JSON.stringify({ term: "wap" }),
-        payMode: JSON.stringify({
-          balanceAvailable: true,
-          couponAvailable: true,
-          quickPayAvailable: true,
-          ebankAvailable: true
-        }),
-        proposal: JSON.stringify({ balance: { payAmount: this.payAmount } })
-      };
-      const time = Date.now();
-      const params = {
-        // 头部的一些信息
-        accept: "*/*",
-        "accept-encoding": "gzip, deflate, br",
-        "content-length": 149,
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        Referer: `https://epay.163.com/cashier/m/standardCashier?orderId=${orderId}`, //referer
-        Host: "my.cbg.163.com",
-        Origin: "https://epay.163.com"
-      };
-      return await this.$http({
-        url: "/ajaxCoupons",
-        method: "POST", // 默认是 get
-        baseURL: "https://epay.163.com/cashier/m/",
-        transformRequest: [
-          // form data提交数据时的一种处理，防止405
-          function(data) {
-            let ret = "";
-            for (let it in data) {
-              ret +=
-                encodeURIComponent(it) +
-                "=" +
-                encodeURIComponent(data[it]) +
-                "&";
-            }
-            return ret;
-          }
-        ],
-        headers: {
-          my_info: JSON.stringify(params)
-        },
-        // 这边需要一个时间搓
-        params: { v: time },
-        // 这里是form data表单数据
-        data
-      });
-    },
-    // 支付接口
-    async ajaxPay(orderId, payAmount, yidunToken) {
-      const time = Date.now();
-      var params = {
-        // 头部的一些信息
-        accept: "*/*",
-        "accept-encoding": "gzip, deflate, br",
-        "content-length": 149,
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        Referer: `https://epay.163.com/cashier/m/standardCashier?orderId=${orderId}`, //referer
-        Host: "my.cbg.163.com",
-        Origin: "https://epay.163.com"
-      };
-      return await this.$http({
-        url: "/ajaxPay",
-        method: "POST", // 默认是 get
-        baseURL: "https://epay.163.com/cashier/m/",
-        transformRequest: [
-          // form data提交数据时的一种处理，防止405
-          function(data) {
-            let ret = "";
-            for (let it in data) {
-              ret +=
-                encodeURIComponent(it) +
-                "=" +
-                encodeURIComponent(data[it]) +
-                "&";
-            }
-            return ret;
-          }
-        ],
-        headers: {
-          my_info: JSON.stringify(params)
-        },
-        // 这边需要一个时间搓
-        params: { v: time },
-        // 这里是form data表单数据
-        data: {
-          proposal: JSON.stringify({ orderId, balance: { payAmount } }),
-          securityValid: JSON.stringify({}),
-          envData: JSON.stringify({ term: "wap" }),
-          yidunToken
-        }
-      });
-    },
-    // 付款接口
-    async payOrder(orderId) {
-      const time = Date.now();
-      var params = {
-        // 头部的一些信息
-        accept: "*/*",
-        "accept-encoding": "gzip, deflate, br",
-        "content-length": 149,
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        Referer: `https://epay.163.com/cashier/m/standardCashier?orderId=${orderId}`, //referer
-        Host: "my.cbg.163.com",
-        Origin: "https://epay.163.com"
-      };
-      return await this.$http({
-        url: "/verifyPayItems",
-        method: "POST", // 默认是 get
-        baseURL: "https://epay.163.com/cashier/m/security/",
-        transformRequest: [
-          // form data提交数据时的一种处理，防止405
-          function(data) {
-            let ret = "";
-            for (let it in data) {
-              ret +=
-                encodeURIComponent(it) +
-                "=" +
-                encodeURIComponent(data[it]) +
-                "&";
-            }
-            return ret;
-          }
-        ],
-        headers: {
-          my_info: JSON.stringify(params)
-        },
-        // 这边需要一个时间搓
-        params: { v: time },
-        // 这里是form data表单数据
-        data: {
-          securityValid: JSON.stringify({
-            shortPayPassword: MD5(this.password)
-          }),
-          orderId,
-          envData: JSON.stringify({ term: "wap" })
-        }
-      });
-    },
     async ifmLoad() {
       // iframe加载完成后执行逻辑
       /* ********  获取iframe的 window 和 document  ********** */
@@ -571,14 +397,23 @@ export default Vue.extend({
       if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.getParams();
-        let orderid_to_epay = await this.my_orders();
-        await this.cancel_order(orderid_to_epay);
+        let orderid_to_epay = await this.myOrders();
+        console.log(orderid_to_epay);
+        // 存在订单就取消对应的订单;
+        if (orderid_to_epay) await this.cancelOrder(orderid_to_epay);
         // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
-        let equip = await this.get_equip_detail();
+        let equip = await this.get_equip_detail(
+          this.param.ordersn,
+          this.ifmsrc,
+          this.param.serverid,
+          this.CBG_CONFIG.safeCode
+        );
+        // 支付金额
         this.payAmount = equip ? equip.price / 100 : 0;
-
-        // 下单
-        orderid_to_epay = equip ? await this.getTicket(equip) : null;
+        // 下单ID
+        orderid_to_epay = equip
+          ? await this.getTicket(equip, this.advanceTime)
+          : null;
         var timer2 = setInterval(() => {
           if (this.CBG_CONFIG.safeCode) {
             // 如果安全码已存在，定时器结束
@@ -612,7 +447,6 @@ export default Vue.extend({
     //   };
     //   hubble.report(eventId, other);
     // };
-    this.getStandardTime();
     this.initWatchman();
     //初始化本地数据
     this.initLocal();
@@ -643,23 +477,29 @@ export default Vue.extend({
                   //   ordid: orderId,
                   //   pfid: "2011101910PT16084831"
                   // });
-                  let res = await this.payOrder(orderId);
+                  let res = await this.payOrder(orderId, this.password);
                   let resData = res.data || {};
                   this.addLog(
                     "支付：verifyPayItems ===> 结果：" + resData.result
                   );
-                  await this.ajaxCoupons(orderId);
+                  await this.ajaxCoupons(orderId, this.payAmount);
                   res = await this.ajaxPay(orderId, this.payAmount, token);
                   resData = res.data || {};
                   this.payTime = Date.now();
-                  this.addLog("付款时间(时间搓) === > " + this.payTime);
+                  this.addLog(
+                    `<b><span style="color:red;">付款接口完成</span>(时间搓) === > ${
+                      this.payTime
+                    }</b>`
+                  );
                   var cha = parseInt(this.payTime) - parseInt(this.orderTime);
-                  this.addLog("下单-付款 时间差 === > " + cha + "ms");
                   resData.errorMsg
                     ? this.addLog(
                         "支付：ajaxPay ===> 结果：" + resData.errorMsg
                       )
                     : this.addLog("支付：ajaxPay ===> 结果：" + resData.result);
+                  this.addLog(
+                    `<b>下单--付款 <span style="color:red;">时间花费</span> === > ${cha}ms</b>`
+                  );
                 }
               );
             }
@@ -671,6 +511,7 @@ export default Vue.extend({
   },
   beforeDestroy() {}
 });
+//
 </script>
  <style lang="scss">
 @import "~@material/button/mdc-button.scss";
