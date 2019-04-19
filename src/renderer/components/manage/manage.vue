@@ -1,6 +1,6 @@
 <template>
   <div id="wrapper">
-    <main>
+    <main v-if="!Expired">
       <iframe
         v-if="ifmsrc"
         id="iframe"
@@ -72,6 +72,11 @@
         </div>
       </div>
     </main>
+    <div class="right-side" v-else>
+      <div class="doc">
+        <div>{{"VISION : beta"}}</div>老哥 软件过期啦
+      </div>
+    </div>
   </div>
 </template>
 
@@ -81,6 +86,7 @@ import Vue from "vue";
 import http from "http";
 import httpProxy from "http-proxy";
 import { scriptGetTicket, scriptPay } from "./script";
+import { lastDate } from "../../config/config";
 const { ipcRenderer } = require("electron");
 const MD5 = require("../../../lib/md5.js");
 
@@ -105,6 +111,9 @@ export default Vue.extend({
       onpay: false,
       // 输出log
       log: "",
+      // 过期日期
+      lastDate: lastDate,
+      today: Date.now(),
       // 输入链接
       inputurl: "",
       // 密码
@@ -134,6 +143,10 @@ export default Vue.extend({
     startTimeC() {
       var start = new Date(this.startTime) + "";
       return start.replace(/\T|Z/g, "  ");
+    },
+    // 是否过期
+    Expired() {
+      return this.today > this.lastDate;
     }
   },
   components: { SystemInformation },

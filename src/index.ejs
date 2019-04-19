@@ -11,8 +11,8 @@
   <script type="text/javascript" src="https://i.epay.126.net/a/eyq/payment/20151121/js/module/sha256.js"></script>
   <script type="text/javascript">
     // s
-    var sha256 = module.exports.sha256;
-    var sha224 = module.exports.sha224;
+    var sha256 = sha256 || module.exports.sha256;
+    var sha224 = sha224 || module.exports.sha224;
   </script>
   <script>
     var env = 'prod'
@@ -185,7 +185,7 @@
   <script>
     require('module').globalPaths.push("<%= htmlWebpackPlugin.options.nodeModules.replace(/\\/g, '\\\\') %>")
     // const enav = new (require('electron-navigation'))();
-    var mixpanel = require('mixpanel-browser');
+    // var mixpanel = require('mixpanel-browser');
     // var sha256 = require("https://i.epay.126.net/a/eyq/payment/20151121/js/module/sha256.js");
   </script>
   <% } %>
