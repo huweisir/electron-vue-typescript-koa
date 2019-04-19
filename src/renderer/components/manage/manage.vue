@@ -494,9 +494,15 @@ export default Vue.extend({
                   var cha = parseInt(this.payTime) - parseInt(this.orderTime);
                   resData.errorMsg
                     ? this.addLog(
-                        "支付：ajaxPay ===> 结果：" + resData.errorMsg
+                        `支付：ajaxPay ===> 结果：<span style="color:red;">${
+                          resData.errorMsg
+                        }</span>`
                       )
-                    : this.addLog("支付：ajaxPay ===> 结果：" + resData.result);
+                    : this.addLog(
+                        `支付：ajaxPay ===> 结果：<span style="color:red;">${
+                          resData.result
+                        }</span>`
+                      );
                   this.addLog(
                     `<b>下单--付款 <span style="color:red;">时间花费</span> === > ${cha}ms</b>`
                   );
