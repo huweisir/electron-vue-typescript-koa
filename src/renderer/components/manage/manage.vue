@@ -486,7 +486,7 @@ export default Vue.extend({
                   this.addLog(
                     "支付：verifyPayItems ===> 结果：" + resData.result
                   );
-                  await this.ajaxCoupons(orderId, this.payAmount);
+                  // await this.ajaxCoupons(orderId, this.payAmount);
                   res = await this.ajaxPay(orderId, this.payAmount, token);
                   resData = res.data || {};
                   this.payTime = Date.now();
