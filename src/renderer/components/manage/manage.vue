@@ -231,6 +231,8 @@ export default Vue.extend({
     async getTicket(equip, advanceTime) {
       const fair_show_end_time = equip.fair_show_end_time || 0;
       let onlineStartTime = Date.parse(fair_show_end_time);
+      // test 使用
+      // const onlineStartTime = Date.now() + 3000;
       this.startTime = onlineStartTime;
       const nowTime = Date.now();
       // 订单到支付的ID
@@ -245,6 +247,11 @@ export default Vue.extend({
         // 定时器
         var timerSetTime = setTimeout(() => {
           var timeSetInterval = setInterval(async () => {
+            if (this.frequency * account - advanceTime > this.frequency * 2) {
+              //超时第二次自动结束
+              clearInterval(timeSetInterval);
+              return;
+            }
             // 提交订单
             if (addOrderStop) {
               return;
@@ -257,11 +264,6 @@ export default Vue.extend({
             });
             // ajax 请求结束
             addOrderStop = false;
-            //获取支付页面URL,
-            if (this.frequency * account - advanceTime > this.frequency * 2) {
-              //超时第三次自动结束
-              clearInterval(timeSetInterval);
-            }
             // 抢票次数，计数器
             account++;
           }, this.frequency);
@@ -272,7 +274,6 @@ export default Vue.extend({
           //成功结束或者失败
           this.getPayUrl(orderid_to_epay);
         });
-        //获取支付页面URL
       }
     },
     open(link) {
@@ -398,7 +399,6 @@ export default Vue.extend({
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.getParams();
         let orderid_to_epay = await this.myOrders();
-        console.log(orderid_to_epay);
         // 存在订单就取消对应的订单;
         if (orderid_to_epay) await this.cancelOrder(orderid_to_epay);
         // 在my.cbg.163.com这个域名下的时候，会去获取商品详情
@@ -477,6 +477,10 @@ export default Vue.extend({
                   //   ordid: orderId,
                   //   pfid: "2011101910PT16084831"
                   // });
+                  this.addLog(
+                    "进入支付页面---开始支付：verifyPayItems ===> 结果：" +
+                      Date.now()
+                  );
                   let res = await this.payOrder(orderId, this.password);
                   let resData = res.data || {};
                   this.addLog(

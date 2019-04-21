@@ -1,21 +1,11 @@
 <template>
   <div id="wrapper">
-    <img id="logo" src="~@/assets/logo.png" alt="electron-vue">
     <main>
       <div class="left-side">
-        <span class="title">Welcome to your new project!</span>
+        <span class="title">查询列表</span>
         <system-information></system-information>
       </div>
-      <div class="right-side">
-        <div class="doc">
-          <div class="title">Getting Started</div>
-          <button
-            @click="open('https://simulatedgreg.gitbooks.io/electron-vue/content/')"
-          >Read the Docs</button>
-          <br>
-          <br>
-        </div>
-      </div>
+      <div class="right-side"></div>
     </main>
   </div>
 </template>
