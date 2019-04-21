@@ -12,7 +12,7 @@
       ></iframe>
       <div class="right-side">
         <div class="doc">
-          <div>{{"VISION : 1.0.0"}}</div>
+          <div>{{"VISION : 1.0.1"}}</div>
           <br>
           <div class="title">Started</div>
           <div>
