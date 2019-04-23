@@ -241,7 +241,7 @@ export default Vue.extend({
       if (parse - ~~advanceTime > 0) {
         let account = 0;
         //开始时间，单位ms
-        let startTime = parse - advanceTime;
+        let startTimeCha = parse - advanceTime;
         // ajax addOrder守卫
         let addOrderStop = false;
         // 定时器
@@ -268,7 +268,7 @@ export default Vue.extend({
             account++;
           }, this.frequency);
           clearTimeout(timerSetTime);
-        }, startTime);
+        }, startTimeCha);
       } else {
         await this.addOrder(equip, orderid_to_epay => {
           //成功结束或者失败
