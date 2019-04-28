@@ -12,12 +12,16 @@
       ></iframe>
       <div class="right-side">
         <div class="doc">
-          <div>{{"VISION : 1.0.1"}}</div>
+          <div>{{"VISION : 1.0.2"}}</div>
           <br>
           <div class="title">Started</div>
           <div>
             <label for>开始时间：</label>
             {{startTimeC}}
+            <span style="margin-left:10px;">
+              <span>剩余：</span>
+              {{startTimeC}}
+            </span>
           </div>
           <div>
             <label for>抢票时间：</label>
@@ -90,11 +94,13 @@ import {
   get_order_pay_info,
   get_equip_detail,
   add_order,
+  my_orders,
   cancel_order
 } from "./ajax/order.ts";
 import { formatTime } from "../../common/toolFunction.ts";
 import { lastDate } from "../../config/config";
 const { ipcRenderer } = require("electron");
+import { mapActions, mapState } from "vuex";
 
 export default Vue.extend({
   name: "LandingPage",
@@ -137,6 +143,7 @@ export default Vue.extend({
     };
   },
   computed: {
+    // vuex接入state
     ifmsrc() {
       var src = this.onpay ? this.href2 : this.href;
       this.onpay = false;
@@ -153,7 +160,8 @@ export default Vue.extend({
     // 是否过期
     Expired() {
       return this.today > this.lastDate;
-    }
+    },
+    ...mapState(["iframeSrc", "safeCode"])
   },
   components: { SystemInformation },
   methods: {
@@ -161,6 +169,7 @@ export default Vue.extend({
     get_order_pay_info,
     get_equip_detail,
     add_order,
+    my_orders,
     cancel_order,
     /***********          *************/
     //
@@ -171,6 +180,9 @@ export default Vue.extend({
     /***********          *************/
     /***********  支付ajax *************/
     //
+    // vuex接入action
+    // ...[],
+    ...mapActions(["updateSafeCode", "updateIframeSrc"]),
     // 时间格式化
     formatTime,
     inputFunc(e, key) {
@@ -232,7 +244,7 @@ export default Vue.extend({
       const fair_show_end_time = equip.fair_show_end_time || 0;
       let onlineStartTime = Date.parse(fair_show_end_time);
       // test 使用
-      // const onlineStartTime = Date.now() + 3000;
+      onlineStartTime = Date.now() + 5000;
       this.startTime = onlineStartTime;
       const nowTime = Date.now();
       // 订单到支付的ID
@@ -281,6 +293,7 @@ export default Vue.extend({
     },
     //生成订单
     async addOrder(equip, callback) {
+      this.addLog("开始下单单：addOrder ===> " + this.formatTime(new Date()));
       let res = await this.add_order(
         equip,
         this.param.serverid,
@@ -313,19 +326,7 @@ export default Vue.extend({
       return orderid_to_epay;
     },
     async myOrders() {
-      let res = await this.$http({
-        url: "/my_orders?page=1&status=1",
-        method: "get", // 默认是 get
-        baseURL: "https://my.cbg.163.com/cgi/api/",
-        headers: {
-          "cbg-safe-code": this.CBG_CONFIG.safeCode,
-          my_info: JSON.stringify({
-            Referer: this.ifmsrc, //referer
-            Host: "my.cbg.163.com",
-            Origin: "https://my.cbg.163.com"
-          })
-        }
-      });
+      let res = await this.my_orders(this.ifmsrc, this.CBG_CONFIG.safeCode);
       let resData = res.data || {};
       if (resData.msg) {
         // 错误状态
@@ -397,6 +398,8 @@ export default Vue.extend({
       //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
       if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
+        this.updateSafeCode(this.CBG_CONFIG.safeCode);
+        console.log(this.updateSafeCode);
         this.getParams();
         let orderid_to_epay = await this.myOrders();
         // 存在订单就取消对应的订单;
@@ -438,15 +441,6 @@ export default Vue.extend({
     }
   },
   created() {
-    // var hubble = window.hubble || new window.HubbleUtil("pay", "payInfo");
-    // window.hubble = hubble;
-    // this.hubbleFun = function(eventId, ordid, pfid) {
-    //   let other = {
-    //     ordid,
-    //     pfid
-    //   };
-    //   hubble.report(eventId, other);
-    // };
     this.initWatchman();
     //初始化本地数据
     this.initLocal();
@@ -466,17 +460,6 @@ export default Vue.extend({
                 "1e334e244f2b46aa9acf4f707686cc23",
                 async token => {
                   this.yidunToken = token;
-                  // this.hubbleFun("enter", {
-                  //   ordid: orderId,
-                  //   pfid: "2011101910PT16084831"
-                  // });
-                  // this.hubbleFun("payMethodClick", {
-                  //   pagetitle: ` 余额（<span id="balanceAmount">${
-                  //     this.payAmount
-                  //   }</span>元） `,
-                  //   ordid: orderId,
-                  //   pfid: "2011101910PT16084831"
-                  // });
                   this.addLog(
                     "进入支付页面---开始支付：verifyPayItems ===> 结果：" +
                       Date.now()
@@ -523,125 +506,4 @@ export default Vue.extend({
 });
 //
 </script>
- <style lang="scss">
-@import "~@material/button/mdc-button.scss";
-@import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro");
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: "Source Sans Pro", sans-serif;
-}
-.right-side {
-  margin-left: 10px;
-  min-width: 280px;
-}
-#wrapper {
-  background: radial-gradient(
-    ellipse at top left,
-    rgba(255, 255, 255, 1) 40%,
-    rgba(229, 229, 229, 0.9) 100%
-  );
-  height: 100vh;
-  padding: 60px 80px;
-  width: 100vw;
-}
-
-label {
-  min-width: 80px;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-#logo {
-  height: auto;
-  margin-bottom: 20px;
-  width: 420px;
-}
-
-.log {
-  white-space: pre-line;
-  font-size: 13px;
-  word-break: break-all;
-  max-width: 300px;
-  max-height: 500px;
-  overflow: auto;
-}
-
-.input {
-  height: 30px;
-  line-height: 30px;
-  box-sizing: border-box;
-  padding: 0 5px;
-  border: 1px solid #e3e3e3;
-  color: #2c3e50;
-  outline: none;
-  border-radius: 5px;
-  min-width: 220px;
-  margin-right: 10px;
-  transition: border-color 0.2s ease;
-  background-size: 20px;
-  vertical-align: middle !important;
-}
-
-main {
-  display: flex;
-  justify-content: space-between;
-}
-
-main > div {
-  flex-basis: 50%;
-}
-
-.left-side {
-  display: flex;
-  flex-direction: column;
-}
-
-.welcome {
-  color: #555;
-  font-size: 23px;
-  margin-bottom: 10px;
-}
-
-.title {
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
-.title.alt {
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.doc p {
-  color: black;
-  margin-bottom: 10px;
-  margin-top: 10px;
-}
-
-.doc button {
-  font-size: 0.8em;
-  cursor: pointer;
-  outline: none;
-  padding: 0.75em 2em;
-  border-radius: 2em;
-  display: inline-block;
-  color: #fff;
-  background-color: #4fc08d;
-  transition: all 0.15s ease;
-  box-sizing: border-box;
-  border: 1px solid #4fc08d;
-}
-
-.doc button.alt {
-  color: #42b983;
-  background-color: transparent;
-}
-</style>
+ <style  src="./manage.scss" lang="scss"  scoped></style>

@@ -29,7 +29,7 @@ const postByParams = async (req: any, url: string) => {
                 Origin: "https://my.cbg.163.com"
             })
         },
-        params: req.params
+        params: req.params || ""
     });
 }
 
@@ -86,4 +86,9 @@ export const cancel_order = async (orderid_to_epay: string, ifmsrc: string, safe
     }
     let url = "/cancel_order";
     return await postByParams({ params, ifmsrc, safeCode }, url)
+}
+
+export const my_orders = async (ifmsrc: string, safeCode: string) => {
+    let url = "/my_orders?page=1&status=1";
+    return await postByParams({ ifmsrc, safeCode }, url)
 }
