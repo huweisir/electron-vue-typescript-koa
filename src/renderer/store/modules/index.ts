@@ -4,13 +4,15 @@
  */
 // import manage from './manage'
 
-const files = (require as any).context('.', false, /\.js$/)
+const files = (require as any).context('.', false, /\.(js)$/)
 const modules: any = {
   // manage
 }
+
 files.keys().forEach((key: any) => {
-  if (key === './index.js') return;
+  if (key.indexOf('index') !== -1) return;
   modules[key.replace(/(\.\/|\.js)/g, '')] = files(key).default
 })
+
 
 export default modules

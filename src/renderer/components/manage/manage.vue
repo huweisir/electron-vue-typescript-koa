@@ -249,10 +249,11 @@ export default Vue.extend({
       const nowTime = Date.now();
       // 订单到支付的ID
       let orderid_to_epay = "";
+      // 开始上架时间 - 现在的时间
       const parse = onlineStartTime - nowTime;
       if (parse - ~~advanceTime > 0) {
         let account = 0;
-        //开始时间，单位ms
+        // 开始抢票时间段，单位ms
         let startTimeCha = parse - advanceTime;
         // ajax addOrder守卫
         let addOrderStop = false;
@@ -269,11 +270,18 @@ export default Vue.extend({
               return;
             }
             addOrderStop = true;
-            await this.addOrder(equip, orderid_to_epay => {
-              //成功结束或者失败
+            let orderid_to_epay = await this.addOrder(
+              equip,
+              orderid_to_epay => {
+                //成功结束或者失败
+                clearInterval(timeSetInterval);
+                this.getPayUrl(orderid_to_epay);
+              }
+            );
+            if (orderid_to_epay) {
               clearInterval(timeSetInterval);
-              this.getPayUrl(orderid_to_epay);
-            });
+              return;
+            }
             // ajax 请求结束
             addOrderStop = false;
             // 抢票次数，计数器

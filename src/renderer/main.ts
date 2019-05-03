@@ -24,7 +24,7 @@ if (!process.env.IS_WEB) Vue.use(vueElectron);
 Vue.config.productionTip = false;
 
 /* eslint-disable no-new */
-new Vue({
+(window as any).app = new Vue({
   components: { App },
   router,
   store,

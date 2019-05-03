@@ -14,12 +14,12 @@ const mutations = {
 
 const actions = {
   updateIframeSrc({ commit }: any, iframeSrc: string) {
-    debugger
+    // debugger
     // do something
     commit('UPDATE_IFRAME_SRC', iframeSrc)
   },
   updateSafeCode({ commit }: any, safeCode: string) {
-    debugger
+    // debugger
     // do something
     commit('UPDATE_SAFE_CODE', safeCode)
   }

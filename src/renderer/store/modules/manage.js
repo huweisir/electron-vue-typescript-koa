@@ -18,7 +18,7 @@ const actions = {
     commit('UPDATE_IFRAME_SRC', iframeSrc)
   },
   updateSafeCode({ commit }, safeCode) {
-    debugger
+    // debugger
     // do something
     commit('UPDATE_SAFE_CODE', safeCode)
   }
