@@ -12,7 +12,7 @@
       ></iframe>
       <div class="right-side">
         <div class="doc">
-          <div>{{"VISION : 1.0.2"}}</div>
+          <div>{{"VISION Time: 1.0.3"}}</div>
           <br>
           <div class="title">Started</div>
           <div>
@@ -244,7 +244,7 @@ export default Vue.extend({
       const fair_show_end_time = equip.fair_show_end_time || 0;
       let onlineStartTime = Date.parse(fair_show_end_time);
       // test 使用
-      onlineStartTime = Date.now() + 5000;
+      // onlineStartTime = Date.now() + 5000;
       this.startTime = onlineStartTime;
       const nowTime = Date.now();
       // 订单到支付的ID
@@ -301,7 +301,10 @@ export default Vue.extend({
     },
     //生成订单
     async addOrder(equip, callback) {
-      this.addLog("开始下单单：addOrder ===> " + this.formatTime(new Date()));
+      this.addLog(
+        `<b><span style="color:red;">开始下单单：addOrder ===></span> </b>` +
+          this.formatTime(new Date())
+      );
       let res = await this.add_order(
         equip,
         this.param.serverid,
