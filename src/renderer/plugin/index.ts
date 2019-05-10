@@ -1,12 +1,14 @@
 /* *********** vue 外部引入的插件 ************ */
-// import antds from './antd.js';
+import antds from './antd';
 // import VueAwesomeSwiper from './swiper';
+// import utils from './utils';
 
 export const use = [
-    // ...antds.components,
+    // ...utils,
+    ...antds.components,
     // VueAwesomeSwiper
 ]
 
 export const protos = {
-    // ...antds.protos
+    ...antds.protos
 }

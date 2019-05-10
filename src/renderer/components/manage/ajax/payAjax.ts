@@ -86,3 +86,4 @@ export const ajaxPay = async (orderId: number, payAmount: number, yidunToken: st
     let url = "/ajaxPay";
     return await postByJsonAndData({ orderId, payAmount, yidunToken, data }, url)
 }
+

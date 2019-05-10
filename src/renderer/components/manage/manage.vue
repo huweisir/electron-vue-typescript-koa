@@ -7,21 +7,22 @@
         :src="ifmsrc"
         @load="ifmLoad();"
         frameborder="0"
-        width="750"
-        height="800"
+        width="530"
+        height="750"
       ></iframe>
       <div class="right-side">
         <div class="doc">
-          <div>{{"VISION Time: 1.0.3"}}</div>
+          <div>{{"VISION: 1.0.4"}}</div>
           <br>
-          <div class="title">Started</div>
+          {{currentUrl}}
+          <div class="title">
+            <span>剩余：{{startTimeL}}</span>
+            <a-checkbox :checked="useNetTime" @change="onChange">是否网络对时</a-checkbox>
+          </div>
           <div>
             <label for>开始时间：</label>
             {{startTimeC}}
-            <span style="margin-left:10px;">
-              <span>剩余：</span>
-              {{startTimeC}}
-            </span>
+            <span style="margin-left:10px;"></span>
           </div>
           <div>
             <label for>抢票时间：</label>
@@ -88,8 +89,9 @@
 import SystemInformation from "../LandingPage/SystemInformation";
 import Vue from "vue";
 import http from "http";
-import { ajaxPay, payOrder, ajaxCoupons } from "./ajax/payAjax.ts";
 import httpProxy from "http-proxy";
+import { ajaxPay, payOrder, ajaxCoupons } from "./ajax/payAjax.ts";
+import { getTimestamp } from "./ajax/other.ts";
 import {
   get_order_pay_info,
   get_equip_detail,
@@ -102,8 +104,9 @@ import { lastDate } from "../../config/config";
 const { ipcRenderer } = require("electron");
 import { mapActions, mapState } from "vuex";
 
+const defaultUrl = "https://my.cbg.163.com/cgi/mweb/index";
+
 export default Vue.extend({
-  name: "LandingPage",
   data() {
     return {
       ifm: null,
@@ -114,8 +117,10 @@ export default Vue.extend({
       validatePhoneCode: false,
       // 开始时间
       startTime: 0,
+      //
+      startTimeL: 0,
       // 抢票链接
-      href: "",
+      href: defaultUrl,
       //支付页链接
       href2: "",
       onpay: false,
@@ -126,6 +131,8 @@ export default Vue.extend({
       today: Date.now(),
       // 输入链接
       inputurl: "",
+      // 是否使用网络对时
+      useNetTime: false,
       // 密码
       password: "",
       //频率默认100ms
@@ -145,9 +152,12 @@ export default Vue.extend({
   computed: {
     // vuex接入state
     ifmsrc() {
-      var src = this.onpay ? this.href2 : this.href;
+      var src = (this.onpay ? this.href2 : this.href) || defaultUrl;
       this.onpay = false;
       return src;
+    },
+    currentUrl() {
+      return this._ifmWin ? this._ifmWin.location.href : "";
     },
     startTimeS() {
       var start = new Date(this.startTime - this.advanceTime);
@@ -157,6 +167,7 @@ export default Vue.extend({
       var start = new Date(this.startTime);
       return this.formatTime(start);
     },
+
     // 是否过期
     Expired() {
       return this.today > this.lastDate;
@@ -177,8 +188,9 @@ export default Vue.extend({
     ajaxPay,
     payOrder,
     ajaxCoupons,
-    /***********          *************/
-    /***********  支付ajax *************/
+    /***********            *************/
+    /*********** other ajax *************/
+    getTimestamp,
     //
     // vuex接入action
     // ...[],
@@ -205,7 +217,7 @@ export default Vue.extend({
     },
     //重载iframe
     reload() {
-      this.href = this.inputurl;
+      this.href = this.inputurl || defaultUrl;
       var ifm = document.getElementById("iframe");
       ifm ? (ifm.src = this.href) : null;
     },
@@ -239,6 +251,10 @@ export default Vue.extend({
     gotoPay(url) {
       this.href2 = url;
     },
+    onChange(e) {
+      console.log(e);
+      this.useNetTime = e.target.checked || false;
+    },
     //计时抢票
     async getTicket(equip, advanceTime) {
       const fair_show_end_time = equip.fair_show_end_time || 0;
@@ -246,7 +262,11 @@ export default Vue.extend({
       // test 使用
       // onlineStartTime = Date.now() + 5000;
       this.startTime = onlineStartTime;
-      const nowTime = Date.now();
+      let nowTime = Date.now();
+      if (this.useNetTime) {
+        let netTime = await this.getTime();
+        nowTime = newTime;
+      }
       // 订单到支付的ID
       let orderid_to_epay = "";
       // 开始上架时间 - 现在的时间
@@ -255,6 +275,7 @@ export default Vue.extend({
         let account = 0;
         // 开始抢票时间段，单位ms
         let startTimeCha = parse - advanceTime;
+        this.leftTime(startTimeCha);
         // ajax addOrder守卫
         let addOrderStop = false;
         // 定时器
@@ -302,7 +323,7 @@ export default Vue.extend({
     //生成订单
     async addOrder(equip, callback) {
       this.addLog(
-        `<b><span style="color:red;">开始下单单：addOrder ===></span> </b>` +
+        `<b><span style="color:red;">开始下单：addOrder ===></span> </b>` +
           this.formatTime(new Date())
       );
       let res = await this.add_order(
@@ -397,6 +418,14 @@ export default Vue.extend({
       };
       this.param = param;
     },
+    async getTime() {
+      // 淘宝对时
+      let res = await this.getTimestamp();
+      let resData = res.data || {};
+      let data = resData.data || {};
+      let t = data.t || 0;
+      return t;
+    },
     async ifmLoad() {
       // iframe加载完成后执行逻辑
       /* ********  获取iframe的 window 和 document  ********** */
@@ -410,7 +439,6 @@ export default Vue.extend({
       if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.updateSafeCode(this.CBG_CONFIG.safeCode);
-        console.log(this.updateSafeCode);
         this.getParams();
         let orderid_to_epay = await this.myOrders();
         // 存在订单就取消对应的订单;
@@ -449,9 +477,21 @@ export default Vue.extend({
       this.frequency = localStorage["frequency"] || 100;
       this.password = localStorage["password"];
       this.password = localStorage["password"];
+    },
+    leftTime(time) {
+      let timer = setInterval(() => {
+        this.startTimeL = time--;
+        if (this.startTimeL == 0) {
+          clearTimeout(timer);
+        }
+        if (this.startTimeL === 10000) {
+          this.reset();
+        }
+      }, 1000);
     }
   },
-  created() {
+  async created() {
+    this.getTime();
     this.initWatchman();
     //初始化本地数据
     this.initLocal();
