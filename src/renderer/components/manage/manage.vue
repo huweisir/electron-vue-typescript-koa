@@ -86,7 +86,6 @@
 </template>
 
 <script>
-import SystemInformation from "../LandingPage/SystemInformation";
 import Vue from "vue";
 import http from "http";
 import httpProxy from "http-proxy";
@@ -174,7 +173,6 @@ export default Vue.extend({
     },
     ...mapState(["iframeSrc", "safeCode"])
   },
-  components: { SystemInformation },
   methods: {
     // 获取订单需要支付的信息，如支付页面
     get_order_pay_info,

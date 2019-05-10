@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import manage from '../components/manage/manage.vue';
-import LandingPage from '../components/LandingPage.vue';
+import fileOps from '../components/fileOps.vue';
 
 Vue.use(Router)
 
@@ -13,9 +13,8 @@ export default new Router({
       component: manage
     },
     {
-      path: '/list',
-      name: 'landing-page',
-      component: LandingPage
+      path: '/files',
+      component: fileOps
     },
     {
       path: '*',
