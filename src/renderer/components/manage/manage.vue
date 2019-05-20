@@ -33,6 +33,7 @@
             <button @click="reset();">刷新页面</button>
             <!-- <button @click="reset();">重置</button> -->
             <button @click="validate();">验证手机号</button>
+            <button @click="loginBtn();">登录</button>
           </div>
         </div>
         <br>
@@ -43,7 +44,22 @@
           </div>
           <br>
           <div>
-            <label for>密码</label>
+            <label for>账号</label>
+            <input class="input" type="text" v-model="user" @input="inputFunc($event,'user')">
+          </div>
+          <br>
+          <div>
+            <label for>登录密码</label>
+            <input
+              class="input"
+              type="text"
+              v-model="loginPassword"
+              @input="inputFunc($event,'loginPassword')"
+            >
+          </div>
+          <br>
+          <div>
+            <label for>付款密码</label>
             <input
               class="input"
               type="text"
@@ -52,6 +68,7 @@
             >
           </div>
           <br>
+
           <div>
             <label for>频率(次/ms)</label>
             <input
@@ -104,6 +121,7 @@ const { ipcRenderer } = require("electron");
 import { mapActions, mapState } from "vuex";
 
 const defaultUrl = "https://my.cbg.163.com/cgi/mweb/index";
+const loginUrl = "https://my.cbg.163.com/cgi/mweb/user";
 
 export default Vue.extend({
   data() {
@@ -111,6 +129,7 @@ export default Vue.extend({
       ifm: null,
       _ifmDoc: null,
       _ifmWin: null,
+      autoLogin: false,
       CBG_CONFIG: {},
       // 是否是验证手机号
       validatePhoneCode: false,
@@ -134,6 +153,10 @@ export default Vue.extend({
       useNetTime: false,
       // 密码
       password: "",
+      // 用户
+      user: "",
+      // 登录密码
+      loginPassword: "",
       //频率默认100ms
       frequency: 50,
       // 提前多少时间开始刷接口
@@ -211,17 +234,21 @@ export default Vue.extend({
     },
     reset() {
       this.validatePhoneCode = false;
-      this.reload();
+      this.href = this.inputurl || defaultUrl;
+      this.reload(this.href);
     },
     //重载iframe
-    reload() {
-      this.href = this.inputurl || defaultUrl;
-      var ifm = document.getElementById("iframe");
-      ifm ? (ifm.src = this.href) : null;
+    reload(_href) {
+      // var ifm = document.getElementById("iframe");
+      this.ifm ? (this.ifm.src = _href) : null;
     },
     validate() {
       this.validatePhoneCode = true;
       this.reload();
+    },
+    loginBtn() {
+      this.href = loginUrl;
+      this.reload(loginUrl);
     },
     //页面输出log
     addLog(_log) {
@@ -424,17 +451,68 @@ export default Vue.extend({
       let t = data.t || 0;
       return t;
     },
+    loginFom(form) {
+      if (this.user && this.loginPassword) {
+        form.email.value = this.user || "";
+        form.password.value = this.loginPassword || "";
+      }
+    },
+    longinFunc(_location) {
+      let dom = "normal";
+      let _document = this._ifmDoc;
+      if (_location.href.indexOf("mweb/user") > -1) {
+        //点击登陆
+        dom = _document.querySelector(".primary");
+        if (dom) dom.click();
+      } else if (_location.href.indexOf("show_login") > -1) {
+        //账号密码输入
+        let ifmSon = _document.querySelector("iframe");
+        let ifmSonDom = ifmSon.contentDocument;
+        dom = ifmSonDom.getElementById("login-form");
+        if (dom) {
+          this.loginFom(dom);
+          dom.querySelector(".u-loginbtn").click();
+        }
+      } else if (_location.href.indexOf("show_license") > -1) {
+        dom = _document.getElementById("check_accept");
+        if (dom) {
+          dom.checked = true;
+          _document.querySelector(".btn").click();
+        }
+      }
+      console.log(dom);
+      return dom;
+    },
     async ifmLoad() {
       // iframe加载完成后执行逻辑
       /* ********  获取iframe的 window 和 document  ********** */
-      this.ifm = document.getElementById("iframe");
       let _ifmDoc = document.getElementById("iframe").contentDocument;
       let _ifmWin = document.getElementById("iframe").contentWindow;
       this._ifmDoc = _ifmDoc;
       this._ifmWin = _ifmWin;
+      let _location = this._ifmWin.location || "";
       /* *********************************************** */
       //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
-      if (this._ifmWin.location.href.indexOf("my.cbg.163.com") > -1) {
+      if (_location.href.indexOf("my.cbg.163.com") > -1) {
+        let dom = this.longinFunc(_location);
+        if (dom !== "normal") {
+          //进入登陆
+          let account = 0;
+          let timerx = setInterval(() => {
+            dom = this.longinFunc(_location);
+            if (dom) {
+              clearInterval(timerx);
+            } else {
+              if (account > 4) {
+                // 0-4最多5次
+                clearInterval(timerx);
+              } else {
+                account++;
+              }
+            }
+          }, 500);
+          return;
+        }
         this.CBG_CONFIG = this._ifmWin.CBG_CONFIG || {};
         this.updateSafeCode(this.CBG_CONFIG.safeCode);
         this.getParams();
@@ -474,7 +552,8 @@ export default Vue.extend({
     initLocal() {
       this.frequency = localStorage["frequency"] || 100;
       this.password = localStorage["password"];
-      this.password = localStorage["password"];
+      this.loginPassword = localStorage["loginPassword"];
+      this.user = localStorage["user"];
     },
     leftTime(time) {
       let timer = setInterval(() => {
@@ -491,6 +570,7 @@ export default Vue.extend({
   async created() {
     this.getTime();
     this.initWatchman();
+    this.ifm = document.getElementById("iframe");
     //初始化本地数据
     this.initLocal();
     ipcRenderer.on("asynchronous-reply", (event, arg) => {
