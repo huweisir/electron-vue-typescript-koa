@@ -306,15 +306,16 @@ export default Vue.extend({
         // 定时器
         var timerSetTime = setTimeout(() => {
           var timeSetInterval = setInterval(async () => {
+            account++;
             if (this.frequency * account - advanceTime > this.frequency * 2) {
               //超时第二次自动结束
               clearInterval(timeSetInterval);
               return;
             }
             // 提交订单
-            if (addOrderStop) {
-              return;
-            }
+            // if (addOrderStop) {
+            //   return;
+            // }
             addOrderStop = true;
             let orderid_to_epay = await this.addOrder(
               equip,
@@ -331,7 +332,6 @@ export default Vue.extend({
             // ajax 请求结束
             addOrderStop = false;
             // 抢票次数，计数器
-            account++;
           }, this.frequency);
           clearTimeout(timerSetTime);
         }, startTimeCha);
