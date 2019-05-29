@@ -300,6 +300,7 @@ export default Vue.extend({
         let account = 0;
         // 开始抢票时间段，单位ms
         let startTimeCha = parse - advanceTime;
+        conosle.log(startTimeCha);
         this.leftTime(startTimeCha);
         // ajax addOrder守卫
         let addOrderStop = false;
@@ -457,14 +458,17 @@ export default Vue.extend({
         form.password.value = this.loginPassword || "";
       }
     },
-    longinFunc(_location) {
+    longinFunc(_href = "") {
       let dom = "normal";
       let _document = this._ifmDoc;
-      if (_location.href.indexOf("mweb/user") > -1) {
+      if (!_href) {
+        dom = null;
+      }
+      if (_href.indexOf("mweb/user") > -1) {
         //点击登陆
         dom = _document.querySelector(".primary");
         if (dom) dom.click();
-      } else if (_location.href.indexOf("show_login") > -1) {
+      } else if (_href.indexOf("show_login") > -1) {
         //账号密码输入
         let ifmSon = _document.querySelector("iframe");
         let ifmSonDom = ifmSon.contentDocument;
@@ -473,7 +477,7 @@ export default Vue.extend({
           this.loginFom(dom);
           dom.querySelector(".u-loginbtn").click();
         }
-      } else if (_location.href.indexOf("show_license") > -1) {
+      } else if (_href.indexOf("show_license") > -1) {
         dom = _document.getElementById("check_accept");
         if (dom) {
           dom.checked = true;
@@ -556,6 +560,7 @@ export default Vue.extend({
       this.user = localStorage["user"];
     },
     leftTime(time) {
+      let leftSec = time / 1000;
       let timer = setInterval(() => {
         this.startTimeL = time--;
         if (this.startTimeL == 0) {
