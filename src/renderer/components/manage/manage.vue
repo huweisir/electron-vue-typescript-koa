@@ -484,7 +484,6 @@ export default Vue.extend({
           _document.querySelector(".btn").click();
         }
       }
-      console.log(dom);
       return dom;
     },
     async ifmLoad() {
@@ -498,7 +497,7 @@ export default Vue.extend({
       /* *********************************************** */
       //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
       if (_location.href.indexOf("my.cbg.163.com") > -1) {
-        let dom = this.longinFunc(_location);
+        let dom = this.longinFunc(_location.href);
         if (dom !== "normal") {
           //进入登陆
           let account = 0;
