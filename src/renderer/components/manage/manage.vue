@@ -300,7 +300,6 @@ export default Vue.extend({
         let account = 0;
         // 开始抢票时间段，单位ms
         let startTimeCha = parse - advanceTime;
-        conosle.log(startTimeCha);
         this.leftTime(startTimeCha);
         // ajax addOrder守卫
         let addOrderStop = false;
