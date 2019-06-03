@@ -8,6 +8,9 @@
         <a-menu-item>
           <router-link to="/">抢票</router-link>
         </a-menu-item>
+        <a-menu-item>
+          <router-link to="/">账号删选</router-link>
+        </a-menu-item>
       </a-menu>
       <a-layout>
         <a-layout-content :style="{ margin: '24px 16px 0' }">

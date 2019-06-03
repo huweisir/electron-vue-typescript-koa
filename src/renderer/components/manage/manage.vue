@@ -119,6 +119,9 @@ import { formatTime } from "../../common/toolFunction.ts";
 import { lastDate } from "../../config/config";
 const { ipcRenderer } = require("electron");
 import { mapActions, mapState } from "vuex";
+var { remote } = require("electron");
+
+// remote.dialog.showErrorBox("title", "content");
 
 const defaultUrl = "https://my.cbg.163.com/cgi/mweb/index";
 const loginUrl = "https://my.cbg.163.com/cgi/mweb/user";
@@ -501,7 +504,8 @@ export default Vue.extend({
           //进入登陆
           let account = 0;
           let timerx = setInterval(() => {
-            dom = this.longinFunc(_location);
+            _location = this._ifmWin.location || "";
+            dom = this.longinFunc(_location.href);
             if (dom) {
               clearInterval(timerx);
             } else {

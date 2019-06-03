@@ -1,24 +1,27 @@
 import {
-  app,
-  BrowserWindow,
-  net,
-  Menu,
-  session,
-  ipcMain
+    app,
+    BrowserWindow,
+    net,
+    Menu,
+    session,
+    ipcMain,
+    Tray
 } from 'electron';
+const path = require('path')
 /**
  * Set `__static` path to static files in production
  * https://simulatedgreg.gitbooks.io/electron-vue/content/en/using-static-assets.html
  */
 if (process.env.NODE_ENV !== 'development') {
-  (global).__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
+    (global).__static = path.join(__dirname, '/static').replace(/\\/g, '\\\\')
 }
+
 
 
 let mainWindow;
 const winURL = process.env.NODE_ENV === 'development' ?
-  `http://localhost:9090` :
-  `file://${__dirname}/index.html`
+    `http://localhost:9090` :
+    `file://${__dirname}/index.html`
 
 // const template = [
 //   {
@@ -108,70 +111,88 @@ const winURL = process.env.NODE_ENV === 'development' ?
 // const menu = Menu.buildFromTemplate(template)
 // Menu.setApplicationMenu(menu)
 function createWindow() {
-  /**
-   * Initial window options
-   */
-  session.defaultSession.webRequest.onBeforeRequest({}, function (details, callback) {
-    var headers = details.requestHeaders;
-    //这里我拿到需要的orderId去给render 然后调用支付接口
-    if (details.url && details.url.indexOf("epay.163.com/cashier/m/standardCashier") > -1) {
-      var orderIdstr = details.url.split("?")[1];
-      var orderId = orderIdstr.split("=")[1];
-      webC.send('asynchronous-reply', {
-        orderId
-      });
-      console.log("onBeforeRequest ===> ", details.url)
-    }
-    callback(details)
-  })
+    /**
+     * Initial window options
+     */
+    session.defaultSession.webRequest.onBeforeRequest({}, function (details, callback) {
+        //这里我拿到需要的orderId去给render 然后调用支付接口
+        if (details.url && details.url.indexOf("epay.163.com/cashier/m/standardCashier") > -1) {
+            var orderIdstr = details.url.split("?")[1];
+            var orderId = orderIdstr.split("=")[1];
+            webC.send('asynchronous-reply', {
+                orderId
+            });
+        }
+        callback(details)
+    })
 
 
-  session.defaultSession.webRequest.onBeforeSendHeaders({}, function (details, callback) {
-    var headers = details.requestHeaders
-    headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1";
-    if (headers.hasOwnProperty("my_info")) {
-      // 这边我会根据接口是否包含my_info来进行一次header信息的重组，相当于做了一次转发。
-      var my_info = JSON.parse(headers['my_info']);
-      for (var key in my_info) {
-        headers[key] = my_info[key];
-      }
-      delete headers['my_info'];
-    }
-    callback({
-      cancel: false,
-      requestHeaders: headers
+    session.defaultSession.webRequest.onBeforeSendHeaders({}, function (details, callback) {
+        var headers = details.requestHeaders
+        headers['User-Agent'] = "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1";
+        if (headers.hasOwnProperty("my_info")) {
+            // 这边我会根据接口是否包含my_info来进行一次header信息的重组，相当于做了一次转发。
+            var my_info = JSON.parse(headers['my_info']);
+            for (var key in my_info) {
+                headers[key] = my_info[key];
+            }
+            delete headers['my_info'];
+        }
+        callback({
+            cancel: false,
+            requestHeaders: headers
+        });
     });
-  });
 
-  mainWindow = new BrowserWindow({
-    height: 500,
-    useContentSize: true,
-    width: 1000,
-    webSecurity: false,
-    webPreferences: {
-      webSecurity: false
-    },
-  })
+    // 托盘部分（mac上方，pc下方）
+    let trayIconSrc = path.join(__dirname, '/static/img');
+    let tray = new Tray(path.join(trayIconSrc, 'xiyou32.png'));
+    const contextMenu = Menu.buildFromTemplate([
+        { label: "Item1", type: "radio" },
+    ]);
+    tray.setToolTip("梦幻西游速抢");
+    tray.setTitle("1");
 
-  mainWindow.loadURL(winURL);
+    tray.setContextMenu(contextMenu);
 
-  const webC = mainWindow.webContents.webContents;
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
+    mainWindow = new BrowserWindow({
+        height: 500,
+        useContentSize: true,
+        width: 1000,
+        webSecurity: false,
+        webPreferences: {
+            webSecurity: false
+        },
+    });
+
+    mainWindow.loadURL(winURL);
+
+    const webC = mainWindow.webContents.webContents;
+
+    mainWindow.on('closed', () => {
+        mainWindow = null
+    })
 }
+app.on('show', () => {
+    tray.setHighlightMode('always')
+})
+
+app.on('hide', () => {
+    tray.setHighlightMode('never')
+})
 
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+    if (process.platform !== 'darwin') {
+        app.quit();
+        tray.destroy();
+    }
 })
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
+    if (mainWindow === null) {
+        createWindow();
+    }
 });
