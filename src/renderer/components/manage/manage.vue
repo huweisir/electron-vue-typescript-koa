@@ -16,7 +16,7 @@
           <br>
           {{currentUrl}}
           <div class="title">
-            <span>剩余：{{startTimeL}}</span>
+            <span>剩余：{{startTimeL+'s'}}</span>
             <a-checkbox :checked="useNetTime" @change="onChange">是否网络对时</a-checkbox>
           </div>
           <div>
@@ -140,6 +140,12 @@ export default Vue.extend({
       startTime: 0,
       //
       startTimeL: 0,
+      //剩余时间计时器
+      leftInterTimer: null,
+      //抢票的计时器
+      addorderInterTimer: null,
+      // 开始抢票计时器
+      startAddOrderTime: null,
       // 抢票链接
       href: defaultUrl,
       //支付页链接
@@ -235,7 +241,10 @@ export default Vue.extend({
         onerror: function(e) {}
       });
     },
+    // 刷新页面
     reset() {
+      this.destroyTimer();
+      this.initData();
       this.validatePhoneCode = false;
       this.href = this.inputurl || defaultUrl;
       this.reload(this.href);
@@ -307,12 +316,12 @@ export default Vue.extend({
         // ajax addOrder守卫
         let addOrderStop = false;
         // 定时器
-        var timerSetTime = setTimeout(() => {
-          var timeSetInterval = setInterval(async () => {
+        this.startAddOrderTime = setTimeout(() => {
+          this.addorderInterTimer = setInterval(async () => {
             account++;
             if (this.frequency * account - advanceTime > this.frequency * 2) {
               //超时第二次自动结束
-              clearInterval(timeSetInterval);
+              clearInterval(this.addorderInterTimer);
               return;
             }
             // 提交订单
@@ -324,19 +333,19 @@ export default Vue.extend({
               equip,
               orderid_to_epay => {
                 //成功结束或者失败
-                clearInterval(timeSetInterval);
+                clearInterval(this.addorderInterTimer);
                 this.getPayUrl(orderid_to_epay);
               }
             );
             if (orderid_to_epay) {
-              clearInterval(timeSetInterval);
+              clearInterval(this.addorderInterTimer);
               return;
             }
             // ajax 请求结束
             addOrderStop = false;
             // 抢票次数，计数器
           }, this.frequency);
-          clearTimeout(timerSetTime);
+          clearTimeout(this.startAddOrderTime);
         }, startTimeCha);
       } else {
         await this.addOrder(equip, orderid_to_epay => {
@@ -554,6 +563,23 @@ export default Vue.extend({
     showTime(_time) {
       this.startTime = _time;
     },
+    //清除定时器
+    destroyTimer() {
+      if (this.leftInterTimer) {
+        clearInterval(this.leftInterTimer);
+      }
+      if (this.addorderInterTimer) {
+        clearInterval(this.addorderInterTimer);
+      }
+      if (this.startAddOrderTime) {
+        clearInterval(this.addorderInterTimer);
+      }
+    },
+    initData() {
+      //初始化剩余时间
+      this.startTimeL = 0;
+      this.startTime = 0;
+    },
     //初始化本地数据
     initLocal() {
       this.frequency = localStorage["frequency"] || 100;
@@ -561,12 +587,13 @@ export default Vue.extend({
       this.loginPassword = localStorage["loginPassword"];
       this.user = localStorage["user"];
     },
+    //剩余时间计算
     leftTime(time) {
       let leftSec = time / 1000;
-      let timer = setInterval(() => {
-        this.startTimeL = time--;
+      this.leftInterTimer = setInterval(() => {
+        this.startTimeL = leftSec--;
         if (this.startTimeL == 0) {
-          clearTimeout(timer);
+          clearTimeout(this.leftInterTimer);
         }
         if (this.startTimeL === 10000) {
           this.reset();
@@ -574,7 +601,14 @@ export default Vue.extend({
       }, 1000);
     }
   },
+
+  beforeDestroy() {
+    this.destroyTimer();
+    this.initData();
+  },
   async created() {
+    this.destroyTimer();
+    this.initData();
     this.getTime();
     this.initWatchman();
     this.ifm = document.getElementById("iframe");

@@ -1,10 +1,10 @@
 import {
     app,
     BrowserWindow,
-    net,
     Menu,
     session,
     ipcMain,
+    globalShortcut,
     Tray
 } from 'electron';
 const path = require('path')
@@ -16,7 +16,7 @@ if (process.env.NODE_ENV !== 'development') {
     (global).__static = path.join(__dirname, '/static').replace(/\\/g, '\\\\')
 }
 
-
+let tray;
 
 let mainWindow;
 const winURL = process.env.NODE_ENV === 'development' ?
@@ -24,92 +24,93 @@ const winURL = process.env.NODE_ENV === 'development' ?
     `file://${__dirname}/index.html`
 
 // const template = [
-//   {
-//     label: 'Edit',
-//     submenu: [
-//       { role: 'undo' },
-//       { role: 'redo' },
-//       { type: 'separator' },
-//       { role: 'cut' },
-//       { role: 'copy' },
-//       { role: 'paste' },
-//       { role: 'pasteandmatchstyle' },
-//       { role: 'delete' },
-//       { role: 'selectall' }
-//     ]
-//   },
-//   {
-//     label: 'View',
-//     submenu: [
-//       { role: 'reload' },
-//       { role: 'forcereload' },
-//       { role: 'toggledevtools' },
-//       { type: 'separator' },
-//       { role: 'resetzoom' },
-//       { role: 'zoomin' },
-//       { role: 'zoomout' },
-//       { type: 'separator' },
-//       { role: 'togglefullscreen' }
-//     ]
-//   },
-//   {
-//     role: 'window',
-//     submenu: [
-//       { role: 'minimize' },
-//       { role: 'close' }
-//     ]
-//   },
-//   {
-//     role: 'help',
-//     submenu: [
-//       {
-//         label: 'Learn More',
-//         click() { require('electron').shell.openExternal('https://electronjs.org') }
-//       }
-//     ]
-//   }
+//     {
+//         label: 'Edit',
+//         submenu: [
+//             { role: 'undo' },
+//             { role: 'redo' },
+//             { type: 'separator' },
+//             { role: 'cut' },
+//             { role: 'copy' },
+//             { role: 'paste' },
+//             { role: 'pasteandmatchstyle' },
+//             { role: 'delete' },
+//             { role: 'selectall' }
+//         ]
+//     },
+//     {
+//         label: 'View',
+//         submenu: [
+//             { role: 'reload' },
+//             { role: 'forcereload' },
+//             { role: 'toggledevtools' },
+//             { type: 'separator' },
+//             { role: 'resetzoom' },
+//             { role: 'zoomin' },
+//             { role: 'zoomout' },
+//             { type: 'separator' },
+//             { role: 'togglefullscreen' }
+//         ]
+//     },
+//     {
+//         role: 'window',
+//         submenu: [
+//             { role: 'minimize' },
+//             { role: 'close' }
+//         ]
+//     },
+//     {
+//         role: 'help',
+//         submenu: [
+//             {
+//                 label: 'Learn More',
+//                 click() { require('electron').shell.openExternal('https://electronjs.org') }
+//             }
+//         ]
+//     }
 // ]
 
 // if (process.platform === 'darwin') {
-//   template.unshift({
-//     label: app.getName(),
-//     submenu: [
-//       { role: 'about' },
-//       { type: 'separator' },
-//       { role: 'services' },
-//       { type: 'separator' },
-//       { role: 'hide' },
-//       { role: 'hideothers' },
-//       { role: 'unhide' },
-//       { type: 'separator' },
-//       { role: 'quit' }
+//     template.unshift({
+//         label: app.getName(),
+//         submenu: [
+//             { role: 'about' },
+//             { type: 'separator' },
+//             { role: 'services' },
+//             { type: 'separator' },
+//             { role: 'hide' },
+//             { role: 'hideothers' },
+//             { role: 'unhide' },
+//             { type: 'separator' },
+//             { role: 'quit' }
+//         ]
+//     })
+
+//     // Edit menu
+//     template[1].submenu.push(
+//         { type: 'separator' },
+//         {
+//             label: 'Speech',
+//             submenu: [
+//                 { role: 'startspeaking' },
+//                 { role: 'stopspeaking' }
+//             ]
+//         }
+//     )
+
+//     // Window menu
+//     template[3].submenu = [
+//         { role: 'close' },
+//         { role: 'minimize' },
+//         { role: 'zoom' },
+//         { type: 'separator' },
+//         { role: 'front' }
 //     ]
-//   })
-
-//   // Edit menu
-//   template[1].submenu.push(
-//     { type: 'separator' },
-//     {
-//       label: 'Speech',
-//       submenu: [
-//         { role: 'startspeaking' },
-//         { role: 'stopspeaking' }
-//       ]
-//     }
-//   )
-
-//   // Window menu
-//   template[3].submenu = [
-//     { role: 'close' },
-//     { role: 'minimize' },
-//     { role: 'zoom' },
-//     { type: 'separator' },
-//     { role: 'front' }
-//   ]
 // }
 
 // const menu = Menu.buildFromTemplate(template)
 // Menu.setApplicationMenu(menu)
+
 function createWindow() {
     /**
      * Initial window options
@@ -143,18 +144,30 @@ function createWindow() {
             requestHeaders: headers
         });
     });
+    // 快接近 shortcut
+    globalShortcut.register('CommandOrControl+n', (e) => {
+        console.log(e)
+        // Do stuff when Y and either Command/Control is pressed.
+    })
 
     // 托盘部分（mac上方，pc下方）
     let trayIconSrc = path.join(__dirname, '/static/img');
-    let tray = new Tray(path.join(trayIconSrc, 'xiyou32.png'));
-    const contextMenu = Menu.buildFromTemplate([
-        { label: "Item1", type: "radio" },
-    ]);
+    tray = new Tray(path.join(trayIconSrc, 'xiyou32.png'));
+    // const contextMenu = Menu.buildFromTemplate([
+    //     { label: "Item1", type: "radio" },
+    // ]);
     tray.setToolTip("梦幻西游速抢");
     tray.setTitle("1");
 
-    tray.setContextMenu(contextMenu);
-
+    // tray.setContextMenu(contextMenu);
+    // console.log(tray.on)
+    tray.on('balloon-click', (e) => {
+        console.log(e);
+        app.show()
+    })
+    tray.on('click', function (e) {
+        mainWindow.show();
+    })
 
     mainWindow = new BrowserWindow({
         height: 500,
@@ -174,20 +187,25 @@ function createWindow() {
         mainWindow = null
     })
 }
-app.on('show', () => {
-    tray.setHighlightMode('always')
-})
+// app.on('show', () => {
+//     console.log("show===>")
+//     app.focus();
+//     tray.setHighlightMode('always')
+// })
 
-app.on('hide', () => {
-    tray.setHighlightMode('never')
-})
+// app.on('hide', (e) => {
+//     console.log("hide===>")
+//     tray.setHighlightMode('never')
+// })
+
+app.on('acbrowser-window-blur', () => { console.log("acbrowser-window-blur===>") })
 
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
+    tray.destroy();
     if (process.platform !== 'darwin') {
         app.quit();
-        tray.destroy();
     }
 })
 

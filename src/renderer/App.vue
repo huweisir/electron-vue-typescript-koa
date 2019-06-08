@@ -6,7 +6,7 @@
           <router-link to="/files">文件处理</router-link>
         </a-menu-item>
         <a-menu-item>
-          <router-link to="/">抢票</router-link>
+          <router-link to="/manage">抢票</router-link>
         </a-menu-item>
         <a-menu-item>
           <router-link to="/">账号删选</router-link>

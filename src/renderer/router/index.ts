@@ -8,7 +8,7 @@ Vue.use(Router)
 export default new Router({
   routes: [
     {
-      path: '/',
+      path: '/manage',
       name: 'manage',
       component: manage
     },
@@ -18,7 +18,7 @@ export default new Router({
     },
     {
       path: '*',
-      redirect: '/'
+      redirect: '/files'
     }
   ]
 })
