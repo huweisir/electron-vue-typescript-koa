@@ -12,3 +12,25 @@ export const formatTime = (date: Date) => {
     });
     return format;
 }
+export const formatHour = (_time: number) => {
+    const time: number = +((+_time).toFixed(2));
+    const hour = Math.floor((time) / 3600);
+    const min = Math.floor((time - hour * 3600) / 60) || 0;
+    const sec = (time - hour * 3600 - min * 60 || 0).toFixed(2);
+    let hourStr = '';
+    let minStr = '';
+    let secStr = '';
+    if (hour) {
+        hourStr = min + '小时'
+    }
+    if (min) {
+        minStr = min + '分'
+    }
+    if (sec) {
+        secStr = sec + '秒'
+    }
+    var x = hourStr + (hourStr ? " " : "")
+        + minStr + (minStr ? " " : "")
+        + secStr;
+    return x
+}

@@ -16,7 +16,9 @@
           <br>
           {{currentUrl}}
           <div class="title">
-            <span>剩余：{{startTimeL+'s'}}</span>
+            <span>剩余：{{(startTimeLeft)|timerFormat}}</span>
+          </div>
+          <div>
             <a-checkbox :checked="useNetTime" @change="onChange">是否网络对时</a-checkbox>
           </div>
           <div>
@@ -30,25 +32,25 @@
           </div>
           <br>
           <div>
-            <button @click="reset();">刷新页面</button>
-            <!-- <button @click="reset();">重置</button> -->
-            <button @click="validate();">验证手机号</button>
-            <button @click="loginBtn();">登录</button>
+            <button class="btn-primary" @click="reset();">刷新页面</button>
+            <!-- <button class="btn-primary" @click="reset();">重置</button> -->
+            <button class="btn-primary" @click="validate();">验证手机号</button>
+            <button class="btn-primary" @click="loginBtn();">登录</button>
           </div>
         </div>
         <br>
         <div class="doc">
-          <div>
+          <div class="form-item">
             <label for>输入链接</label>
             <input class="input" type="text" v-model="inputurl">
           </div>
-          <br>
-          <div>
+
+          <div class="form-item">
             <label for>账号</label>
             <input class="input" type="text" v-model="user" @input="inputFunc($event,'user')">
           </div>
-          <br>
-          <div>
+
+          <div class="form-item">
             <label for>登录密码</label>
             <input
               class="input"
@@ -57,8 +59,8 @@
               @input="inputFunc($event,'loginPassword')"
             >
           </div>
-          <br>
-          <div>
+
+          <div class="form-item">
             <label for>付款密码</label>
             <input
               class="input"
@@ -67,9 +69,8 @@
               @input="inputFunc($event,'password')"
             >
           </div>
-          <br>
 
-          <div>
+          <div class="form-item">
             <label for>频率(次/ms)</label>
             <input
               class="input"
@@ -78,8 +79,8 @@
               @input="inputFunc($event,'frequency')"
             >
           </div>
-          <br>
-          <div>
+
+          <div class="form-item">
             <label for>提前多少毫秒</label>
             <input
               class="input"
@@ -115,7 +116,7 @@ import {
   my_orders,
   cancel_order
 } from "./ajax/order.ts";
-import { formatTime } from "../../common/toolFunction.ts";
+import { formatTime, formatHour } from "../../common/toolFunction.ts";
 import { lastDate } from "../../config/config";
 const { ipcRenderer } = require("electron");
 import { mapActions, mapState } from "vuex";
@@ -139,7 +140,7 @@ export default Vue.extend({
       // 开始时间
       startTime: 0,
       //
-      startTimeL: 0,
+      startTimeLeft: 0,
       //剩余时间计时器
       leftInterTimer: null,
       //抢票的计时器
@@ -205,6 +206,12 @@ export default Vue.extend({
     },
     ...mapState(["iframeSrc", "safeCode"])
   },
+  filters: {
+    timerFormat: function(value) {
+      const x = formatHour(value);
+      return x;
+    }
+  },
   methods: {
     // 获取订单需要支付的信息，如支付页面
     get_order_pay_info,
@@ -227,6 +234,7 @@ export default Vue.extend({
     ...mapActions(["updateSafeCode", "updateIframeSrc"]),
     // 时间格式化
     formatTime,
+    formatHour,
     inputFunc(e, key) {
       localStorage[key] = e.target.value;
     },
@@ -243,16 +251,15 @@ export default Vue.extend({
     },
     // 刷新页面
     reset() {
-      this.destroyTimer();
-      this.initData();
       this.validatePhoneCode = false;
       this.href = this.inputurl || defaultUrl;
       this.reload(this.href);
     },
     //重载iframe
     reload(_href) {
-      // var ifm = document.getElementById("iframe");
-      this.ifm ? (this.ifm.src = _href) : null;
+      //?????????
+      var ifm = document.getElementById("iframe");
+      ifm ? (ifm.src = _href) : null;
     },
     validate() {
       this.validatePhoneCode = true;
@@ -498,6 +505,9 @@ export default Vue.extend({
       return dom;
     },
     async ifmLoad() {
+      //初始化数据及一些定时器
+      this.destroyTimer();
+      this.initData();
       // iframe加载完成后执行逻辑
       /* ********  获取iframe的 window 和 document  ********** */
       let _ifmDoc = document.getElementById("iframe").contentDocument;
@@ -577,7 +587,7 @@ export default Vue.extend({
     },
     initData() {
       //初始化剩余时间
-      this.startTimeL = 0;
+      this.startTimeLeft = 0;
       this.startTime = 0;
     },
     //初始化本地数据
@@ -591,17 +601,17 @@ export default Vue.extend({
     leftTime(time) {
       let leftSec = time / 1000;
       this.leftInterTimer = setInterval(() => {
-        this.startTimeL = leftSec--;
-        if (this.startTimeL == 0) {
+        this.startTimeLeft = leftSec--;
+        console.log(this.startTimeLeft);
+        if (this.startTimeLeft == 0) {
           clearTimeout(this.leftInterTimer);
         }
-        if (this.startTimeL === 10000) {
+        if (this.startTimeLeft === 10000) {
           this.reset();
         }
       }, 1000);
     }
   },
-
   beforeDestroy() {
     this.destroyTimer();
     this.initData();
