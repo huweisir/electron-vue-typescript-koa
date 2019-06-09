@@ -606,7 +606,7 @@ export default Vue.extend({
         if (this.startTimeLeft == 0) {
           clearTimeout(this.leftInterTimer);
         }
-        if (this.startTimeLeft === 10000) {
+        if (+this.startTimeLeft === 60) {
           this.reset();
         }
       }, 1000);

@@ -21,7 +21,7 @@ export const formatHour = (_time: number) => {
     let minStr = '';
     let secStr = '';
     if (hour) {
-        hourStr = min + '小时'
+        hourStr = hour + '小时'
     }
     if (min) {
         minStr = min + '分'
