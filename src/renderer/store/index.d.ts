@@ -1,2 +1,2 @@
-declare const _default: import("vuex").Store<{}>;
-export default _default;
+declare var store: import("vuex").Store<{}>;
+export default store;

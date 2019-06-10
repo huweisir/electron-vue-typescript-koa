@@ -12,7 +12,7 @@
       ></iframe>
       <div class="right-side">
         <div class="doc">
-          <div>{{"VISION: 1.0.4"}}</div>
+          <div>{{"VISION: 1.0.5"}}</div>
           <br>
           {{currentUrl}}
           <div class="title">
@@ -33,7 +33,6 @@
           <br>
           <div>
             <button class="btn-primary" @click="reset();">刷新页面</button>
-            <!-- <button class="btn-primary" @click="reset();">重置</button> -->
             <button class="btn-primary" @click="validate();">验证手机号</button>
             <button class="btn-primary" @click="loginBtn();">登录</button>
           </div>
@@ -42,14 +41,12 @@
         <div class="doc">
           <div class="form-item">
             <label for>输入链接</label>
-            <input class="input" type="text" v-model="inputurl">
+            <input class="input" type="text" v-model="inputUrl">
           </div>
-
           <div class="form-item">
             <label for>账号</label>
             <input class="input" type="text" v-model="user" @input="inputFunc($event,'user')">
           </div>
-
           <div class="form-item">
             <label for>登录密码</label>
             <input
@@ -59,7 +56,6 @@
               @input="inputFunc($event,'loginPassword')"
             >
           </div>
-
           <div class="form-item">
             <label for>付款密码</label>
             <input
@@ -69,7 +65,6 @@
               @input="inputFunc($event,'password')"
             >
           </div>
-
           <div class="form-item">
             <label for>频率(次/ms)</label>
             <input
@@ -79,7 +74,6 @@
               @input="inputFunc($event,'frequency')"
             >
           </div>
-
           <div class="form-item">
             <label for>提前多少毫秒</label>
             <input
@@ -158,7 +152,7 @@ export default Vue.extend({
       lastDate: lastDate,
       today: Date.now(),
       // 输入链接
-      inputurl: "",
+      inputUrl: "",
       // 是否使用网络对时
       useNetTime: false,
       // 密码
@@ -252,7 +246,7 @@ export default Vue.extend({
     // 刷新页面
     reset() {
       this.validatePhoneCode = false;
-      this.href = this.inputurl || defaultUrl;
+      this.href = this.inputUrl || defaultUrl;
       this.reload(this.href);
     },
     //重载iframe
@@ -296,8 +290,8 @@ export default Vue.extend({
       this.href2 = url;
     },
     onChange(e) {
-      console.log(e);
       this.useNetTime = e.target.checked || false;
+      this.reset();
     },
     //计时抢票
     async getTicket(equip, advanceTime) {
@@ -309,7 +303,7 @@ export default Vue.extend({
       let nowTime = Date.now();
       if (this.useNetTime) {
         let netTime = await this.getTime();
-        nowTime = newTime;
+        nowTime = +newTime;
       }
       // 订单到支付的ID
       let orderid_to_epay = "";
@@ -320,7 +314,7 @@ export default Vue.extend({
         // 开始抢票时间段，单位ms
         let startTimeCha = parse - advanceTime;
         this.leftTime(startTimeCha);
-        // ajax addOrder守卫
+        // ajax addOrder 守卫
         let addOrderStop = false;
         // 定时器
         this.startAddOrderTime = setTimeout(() => {
@@ -332,9 +326,6 @@ export default Vue.extend({
               return;
             }
             // 提交订单
-            // if (addOrderStop) {
-            //   return;
-            // }
             addOrderStop = true;
             let orderid_to_epay = await this.addOrder(
               equip,
@@ -442,8 +433,8 @@ export default Vue.extend({
     },
     // 获取页面信息的接口
     getParams() {
-      if (this.inputurl) {
-        this.href = this.inputurl;
+      if (this.inputUrl) {
+        this.href = this.inputUrl;
       }
       let splitStr = this.href.split("equip");
       let dataHref =

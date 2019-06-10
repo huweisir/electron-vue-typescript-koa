@@ -151,23 +151,22 @@ function createWindow() {
     })
 
     // 托盘部分（mac上方，pc下方）
-    let trayIconSrc = path.join(__dirname, '/static/img');
-    tray = new Tray(path.join(trayIconSrc, 'xiyou32.png'));
+    // tray = new Tray(path.join(__dirname, 'xiyou32.png'));
     // const contextMenu = Menu.buildFromTemplate([
     //     { label: "Item1", type: "radio" },
     // ]);
-    tray.setToolTip("梦幻西游速抢");
-    tray.setTitle("1");
+    // tray.setToolTip("梦幻西游速抢");
+    // tray.setTitle("1");
 
     // tray.setContextMenu(contextMenu);
     // console.log(tray.on)
-    tray.on('balloon-click', (e) => {
-        console.log(e);
-        app.show()
-    })
-    tray.on('click', function (e) {
-        mainWindow.show();
-    })
+    // tray.on('balloon-click', (e) => {
+    //     console.log(e);
+    //     app.show()
+    // })
+    // tray.on('click', function (e) {
+    //     mainWindow.show();
+    // })
 
     mainWindow = new BrowserWindow({
         height: 500,
