@@ -13,7 +13,7 @@
       <div class="right-side">
         <div class="doc">
           <div>{{"VISION: 1.0.5"}}</div>
-          <br>
+          <br />
           {{currentUrl}}
           <div class="title">
             <span>剩余：{{(startTimeLeft)|timerFormat}}</span>
@@ -30,22 +30,22 @@
             <label for>抢票时间：</label>
             {{startTimeS}}
           </div>
-          <br>
+          <br />
           <div>
             <button class="btn-primary" @click="reset();">刷新页面</button>
             <button class="btn-primary" @click="validate();">验证手机号</button>
             <button class="btn-primary" @click="loginBtn();">登录</button>
           </div>
         </div>
-        <br>
+        <br />
         <div class="doc">
           <div class="form-item">
             <label for>输入链接</label>
-            <input class="input" type="text" v-model="inputUrl">
+            <input class="input" type="text" v-model="inputUrl" />
           </div>
           <div class="form-item">
             <label for>账号</label>
-            <input class="input" type="text" v-model="user" @input="inputFunc($event,'user')">
+            <input class="input" type="text" v-model="user" @input="inputFunc($event,'user')" />
           </div>
           <div class="form-item">
             <label for>登录密码</label>
@@ -54,7 +54,7 @@
               type="text"
               v-model="loginPassword"
               @input="inputFunc($event,'loginPassword')"
-            >
+            />
           </div>
           <div class="form-item">
             <label for>付款密码</label>
@@ -63,7 +63,7 @@
               type="text"
               v-model="password"
               @input="inputFunc($event,'password')"
-            >
+            />
           </div>
           <div class="form-item">
             <label for>频率(次/ms)</label>
@@ -72,7 +72,7 @@
               type="text"
               v-model="frequency"
               @input="inputFunc($event,'frequency')"
-            >
+            />
           </div>
           <div class="form-item">
             <label for>提前多少毫秒</label>
@@ -81,9 +81,9 @@
               type="text"
               v-model="advanceTime"
               @input="inputFunc($event,'advanceTime')"
-            >
+            />
           </div>
-          <br>
+          <br />
           <h3 style="color:red;">日志:</h3>
           <div class="log" v-html="log"></div>
         </div>
@@ -162,7 +162,7 @@ export default Vue.extend({
       // 登录密码
       loginPassword: "",
       //频率默认100ms
-      frequency: 50,
+      frequency: 40,
       // 提前多少时间开始刷接口
       advanceTime: 200,
       payAmount: 0,
@@ -313,6 +313,7 @@ export default Vue.extend({
         let account = 0;
         // 开始抢票时间段，单位ms
         let startTimeCha = parse - advanceTime;
+        // 显示剩余时间
         this.leftTime(startTimeCha);
         // ajax addOrder 守卫
         let addOrderStop = false;
@@ -379,9 +380,7 @@ export default Vue.extend({
         orderid_to_epay = resData.order.orderid_to_epay;
         this.orderTime = Date.now();
         this.addLog(
-          `<b><span style="color:red;">下单接口完成</span>(时间搓) === > ${
-            this.orderTime
-          }</b>`
+          `<b><span style="color:red;">下单接口完成</span>(时间搓) === > ${this.orderTime}</b>`
         );
       }
       this.addLog(
@@ -467,7 +466,7 @@ export default Vue.extend({
         form.password.value = this.loginPassword || "";
       }
     },
-    longinFunc(_href = "") {
+    loginFunc(_href = "") {
       let dom = "normal";
       let _document = this._ifmDoc;
       if (!_href) {
@@ -509,13 +508,13 @@ export default Vue.extend({
       /* *********************************************** */
       //判断是否是支付页面，不是支付页面（购买页面）时执行获取接口安全验证信息safecode
       if (_location.href.indexOf("my.cbg.163.com") > -1) {
-        let dom = this.longinFunc(_location.href);
+        let dom = this.loginFunc(_location.href);
         if (dom !== "normal") {
           //进入登陆
           let account = 0;
           let timerx = setInterval(() => {
             _location = this._ifmWin.location || "";
-            dom = this.longinFunc(_location.href);
+            dom = this.loginFunc(_location.href);
             if (dom) {
               clearInterval(timerx);
             } else {
@@ -583,7 +582,7 @@ export default Vue.extend({
     },
     //初始化本地数据
     initLocal() {
-      this.frequency = localStorage["frequency"] || 100;
+      this.frequency = localStorage["frequency"] || 40;
       this.password = localStorage["password"];
       this.loginPassword = localStorage["loginPassword"];
       this.user = localStorage["user"];
@@ -593,7 +592,6 @@ export default Vue.extend({
       let leftSec = time / 1000;
       this.leftInterTimer = setInterval(() => {
         this.startTimeLeft = leftSec--;
-        console.log(this.startTimeLeft);
         if (this.startTimeLeft == 0) {
           clearTimeout(this.leftInterTimer);
         }
@@ -645,21 +643,15 @@ export default Vue.extend({
                   resData = res.data || {};
                   this.payTime = Date.now();
                   this.addLog(
-                    `<b><span style="color:red;">付款接口完成</span>(时间搓) === > ${
-                      this.payTime
-                    }</b>`
+                    `<b><span style="color:red;">付款接口完成</span>(时间搓) === > ${this.payTime}</b>`
                   );
                   var cha = parseInt(this.payTime) - parseInt(this.orderTime);
                   resData.errorMsg
                     ? this.addLog(
-                        `支付：ajaxPay ===> 结果：<span style="color:red;">${
-                          resData.errorMsg
-                        }</span>`
+                        `支付：ajaxPay ===> 结果：<span style="color:red;">${resData.errorMsg}</span>`
                       )
                     : this.addLog(
-                        `支付：ajaxPay ===> 结果：<span style="color:red;">${
-                          resData.result
-                        }</span>`
+                        `支付：ajaxPay ===> 结果：<span style="color:red;">${resData.result}</span>`
                       );
                   this.addLog(
                     `<b>下单--付款 <span style="color:red;">时间花费</span> === > ${cha}ms</b>`
