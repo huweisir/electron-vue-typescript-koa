@@ -251,6 +251,7 @@ export default Vue.extend({
     },
     //重载iframe
     reload(_href) {
+      this.stopADD = true;
       //?????????
       var ifm = document.getElementById("iframe");
       ifm ? (ifm.src = _href) : null;
@@ -271,6 +272,7 @@ export default Vue.extend({
     },
     //获取支付页面URL
     async getPayUrl(orderid_to_epay) {
+      this.addLog("跳转id===>" + orderid_to_epay);
       // 获取订单需要支付的信息，如支付页面
       let url = orderid_to_epay
         ? await this.get_order_pay_info(
@@ -280,6 +282,7 @@ export default Vue.extend({
           )
         : null;
       if (url) {
+        this.addLog("跳转url===>" + url);
         this.onpay = true;
         // 跳转支付页面
         this.gotoPay(url);
@@ -298,7 +301,7 @@ export default Vue.extend({
       const fair_show_end_time = equip.fair_show_end_time || 0;
       let onlineStartTime = Date.parse(fair_show_end_time);
       // test 使用
-      // onlineStartTime = Date.now() + 5000;
+      // let onlineStartTime = Date.now() + 8000;
       this.startTime = onlineStartTime;
       let nowTime = Date.now();
       if (this.useNetTime) {
@@ -317,6 +320,7 @@ export default Vue.extend({
         this.leftTime(startTimeCha);
         // ajax addOrder 守卫
         let addOrderStop = false;
+        this.stopADD = false;
         // 定时器
         this.startAddOrderTime = setTimeout(() => {
           this.addorderInterTimer = setInterval(async () => {
@@ -386,7 +390,9 @@ export default Vue.extend({
       this.addLog(
         "下单：addOrder ===> 结果：" + log + " " + this.formatTime(new Date())
       );
-      if (callback && resData.status == 1 && orderid_to_epay) {
+      if (!this.stopADD && callback && resData.status == 1 && orderid_to_epay) {
+        // 下城成功守卫
+        this.stopADD = true;
         if (callback) callback(orderid_to_epay || "");
       }
       return orderid_to_epay;
@@ -477,14 +483,21 @@ export default Vue.extend({
         dom = _document.querySelector(".primary");
         if (dom) dom.click();
       } else if (_href.indexOf("show_login") > -1) {
-        //账号密码输入
-        let ifmSon = _document.querySelector("iframe");
-        let ifmSonDom = ifmSon.contentDocument;
-        dom = ifmSonDom.getElementById("login-form");
-        if (dom) {
-          this.loginFom(dom);
-          dom.querySelector(".u-loginbtn").click();
-        }
+        var timerX = setTimeout(() => {
+          //账号密码输入
+          let ifmSon = _document.querySelector("iframe");
+          let ifmSonDom = ifmSon.contentDocument;
+          var head = ifmSonDom.querySelector(".u-head1 ");
+          if (head) {
+            head.click();
+          }
+          dom = ifmSonDom.getElementById("login-form");
+          if (dom) {
+            this.loginFom(dom);
+            dom.querySelector(".u-loginbtn").click();
+          }
+          clearTimeout(timerX);
+        }, 800);
       } else if (_href.indexOf("show_license") > -1) {
         dom = _document.getElementById("check_accept");
         if (dom) {
@@ -614,6 +627,7 @@ export default Vue.extend({
     //初始化本地数据
     this.initLocal();
     ipcRenderer.on("asynchronous-reply", (event, arg) => {
+      this.addLog("asynchronous-reply===>");
       //渲染进程接收主进程响应回来的处理结果
       Object.keys(arg).forEach(ele => {
         const key = ele;
