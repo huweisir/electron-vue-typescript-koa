@@ -1,6 +1,6 @@
 <template>
   <div id="wrapper">
-    <main v-if="!Expired">
+    <main>
       <iframe
         v-if="ifmsrc"
         id="iframe"
@@ -89,11 +89,11 @@
         </div>
       </div>
     </main>
-    <div class="right-side" v-else>
+    <!-- <div class="right-side" v-else>
       <div class="doc">
         <div>{{"VISION : beta"}}</div>老哥 软件过期啦
       </div>
-    </div>
+    </div>-->
   </div>
 </template>
 
