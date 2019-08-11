@@ -1,6 +1,13 @@
+<!--
+ * @Author: Hu Wei
+ * @Date: 2019-08-11 16:34:58
+ * @git: https://github.com/huweisir
+ * @zhihu: https://www.zhihu.com/people/hu-wei-40-39-30-26/activities
+ * @LastEditTime: 2019-08-11 16:35:38
+ -->
 <template>
   <div id="wrapper">
-    <main v-if="!Expired">
+    <main>
       <iframe
         v-if="ifmsrc"
         id="iframe"
@@ -13,7 +20,7 @@
       <div class="right-side">
         <div class="doc">
           <div>{{"VISION : 1.0.1"}}</div>
-          <br>
+          <br />
           <div class="title">Started</div>
           <div>
             <label for>开始时间：</label>
@@ -23,20 +30,20 @@
             <label for>抢票时间：</label>
             {{startTimeS}}
           </div>
-          <br>
+          <br />
           <div>
             <button @click="reset();">刷新页面</button>
             <!-- <button @click="reset();">重置</button> -->
             <button @click="validate();">验证手机号</button>
           </div>
         </div>
-        <br>
+        <br />
         <div class="doc">
           <div>
             <label for>输入链接</label>
-            <input class="input" type="text" v-model="inputurl">
+            <input class="input" type="text" v-model="inputurl" />
           </div>
-          <br>
+          <br />
           <div>
             <label for>密码</label>
             <input
@@ -44,9 +51,9 @@
               type="text"
               v-model="password"
               @input="inputFunc($event,'password')"
-            >
+            />
           </div>
-          <br>
+          <br />
           <div>
             <label for>频率(次/ms)</label>
             <input
@@ -54,9 +61,9 @@
               type="text"
               v-model="frequency"
               @input="inputFunc($event,'frequency')"
-            >
+            />
           </div>
-          <br>
+          <br />
           <div>
             <label for>提前多少毫秒</label>
             <input
@@ -64,19 +71,14 @@
               type="text"
               v-model="advanceTime"
               @input="inputFunc($event,'advanceTime')"
-            >
+            />
           </div>
-          <br>
+          <br />
           <h3 style="color:red;">日志:</h3>
           <div class="log" v-html="log"></div>
         </div>
       </div>
     </main>
-    <div class="right-side" v-else>
-      <div class="doc">
-        <div>{{"VISION : beta"}}</div>老哥 软件过期啦
-      </div>
-    </div>
   </div>
 </template>
 
@@ -299,9 +301,7 @@ export default Vue.extend({
         orderid_to_epay = resData.order.orderid_to_epay;
         this.orderTime = Date.now();
         this.addLog(
-          `<b><span style="color:red;">下单接口完成</span>(时间搓) === > ${
-            this.orderTime
-          }</b>`
+          `<b><span style="color:red;">下单接口完成</span>(时间搓) === > ${this.orderTime}</b>`
         );
       }
       this.addLog(
@@ -491,21 +491,15 @@ export default Vue.extend({
                   resData = res.data || {};
                   this.payTime = Date.now();
                   this.addLog(
-                    `<b><span style="color:red;">付款接口完成</span>(时间搓) === > ${
-                      this.payTime
-                    }</b>`
+                    `<b><span style="color:red;">付款接口完成</span>(时间搓) === > ${this.payTime}</b>`
                   );
                   var cha = parseInt(this.payTime) - parseInt(this.orderTime);
                   resData.errorMsg
                     ? this.addLog(
-                        `支付：ajaxPay ===> 结果：<span style="color:red;">${
-                          resData.errorMsg
-                        }</span>`
+                        `支付：ajaxPay ===> 结果：<span style="color:red;">${resData.errorMsg}</span>`
                       )
                     : this.addLog(
-                        `支付：ajaxPay ===> 结果：<span style="color:red;">${
-                          resData.result
-                        }</span>`
+                        `支付：ajaxPay ===> 结果：<span style="color:red;">${resData.result}</span>`
                       );
                   this.addLog(
                     `<b>下单--付款 <span style="color:red;">时间花费</span> === > ${cha}ms</b>`
